@@ -201,7 +201,7 @@ static int __camera_set_video_fmt()
   return 0;
 }
 
-int camera_buffer_release(int num)
+static int __camera_buffer_release(int num)
 {
   int i = 0;
 
@@ -261,7 +261,7 @@ static int __camera_request_buffer()
     if (MAP_FAILED == g_buffers[i].data) {
       LOGT(TAG, "buffer[%d] mmap failed", i);
       if (i > 0) {
-        camera_buffer_release(i);
+        __camera_buffer_release(i);
       }
       return -1;
     }
@@ -339,7 +339,7 @@ void video_capture_fini()
 
   // 释放映射的缓冲区
   if (g_buffers != NULL) {
-    camera_buffer_release(g_buffer_num);
+    __camera_buffer_release(g_buffer_num);
   }
 
   // 关闭设备文件
