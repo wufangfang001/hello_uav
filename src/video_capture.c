@@ -178,7 +178,7 @@ static int __camera_query_cap()
 
   struct v4l2_fmtdesc dis_fmtdesc;
   dis_fmtdesc.index = 0;
-  dis_fmtdesc.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+  dis_fmtdesc.type  = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
   LOGT(TAG, "Support format:");
 
@@ -290,11 +290,8 @@ void yuyv2yuv420(unsigned char *yuyv, unsigned char *yuv420, int width, int heig
 
   /**处理UV分量**/
   start = yuyv;
-  for (int h = 0; h < height; h += 2)  // 隔行, 我选择保留偶数行
-  {
-    for (int w = h * width * 2 + 1; w < width * 2 * (h + 1);
-         w += 4)  // YUYV单行中每四个字节含有一对UV分量
-    {
+  for (int h = 0; h < height; h += 2) { // 隔行, 我选择保留偶数行
+    for (int w = h * width * 2 + 1; w < width * 2 * (h + 1); w += 4) { // YUYV单行中每四个字节含有一对UV分量
       *u++ = *(start + w);
       *v++ = *(start + w + 2);
     }
