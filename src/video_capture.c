@@ -16,19 +16,20 @@
 
 #define TAG  "[CAP]"
 
-#define CAPTURE_WIDTH  1280
-#define CAPTURE_HEIGHT 720
+#define CAPTURE_WIDTH     (1280)
+#define CAPTURE_HEIGHT    (720)
 
-static int g_camera_fd    = -1;
-static Buffer* g_buffers  = NULL;
-static int g_buffer_num   = 4;
-static struct v4l2_buffer g_v4l2_buf = { 0 };
+static int                g_camera_fd  = -1;
+static Buffer*            g_buffers    = NULL;
+static int                g_buffer_num = 4;
+static struct v4l2_buffer g_v4l2_buf   = { 0 };
 
 #define DEVICE_NAME "/dev/video0"
 
 static int __camera_ioctl(int request, void *arg)
 {
-  int ret = -1;
+  int ret;
+
   do {
     ret = ioctl(g_camera_fd, request, arg);
   } while (ret < 0 && EINTR == errno);
@@ -48,13 +49,13 @@ int video_capture_start()
 
   for (i = 0; i < g_buffer_num; ++i) {
     v4l2_buf.index = i;
-    if (__camera_ioctl(VIDIOC_QBUF, &v4l2_buf) < 0) {
+    if (0 > __camera_ioctl(VIDIOC_QBUF, &v4l2_buf)) {
       LOGE(TAG, "VIDIOC_QBUF error:%d %s", errno, strerror(errno));
       return -1;
     }
   }
 
-  if (__camera_ioctl(VIDIOC_STREAMON, &type) < 0) {
+  if (0 > __camera_ioctl(VIDIOC_STREAMON, &type)) {
     LOGE(TAG, "VIDIOC_STREAMON error:%d %s", errno, strerror(errno));
     return -1;
   }
@@ -96,7 +97,7 @@ Buffer video_capture_try_get_one_frame()
     return frame;
   }
 
-  if (__camera_ioctl(VIDIOC_DQBUF, &g_v4l2_buf) < 0) {
+  if (0 > __camera_ioctl(VIDIOC_DQBUF, &g_v4l2_buf)) {
     LOGE(TAG, "VIDIOC_DQBUF error: %d %s", errno, strerror(errno));
     return frame;
   }
@@ -112,7 +113,7 @@ void video_capture_clear_one_frame()
     return;
   }
 
-  if (__camera_ioctl(VIDIOC_QBUF, &g_v4l2_buf) < 0) {
+  if (0 > __camera_ioctl(VIDIOC_QBUF, &g_v4l2_buf)) {
     LOGE(TAG, "camera_read_frame VIDIOC_QBUF error:%d %s", errno, strerror(errno));
   }
 }
@@ -122,7 +123,7 @@ static int __camera_open()
   struct stat devStat;
 
   memset(&devStat, 0, sizeof(devStat));
-  if (stat(DEVICE_NAME, &devStat) < 0) {
+  if (0 > stat(DEVICE_NAME, &devStat)) {
     LOGE(TAG, "get device[%s] info failed: %d, %s", DEVICE_NAME, errno, strerror(errno));
     return -1;
   }
@@ -132,7 +133,6 @@ static int __camera_open()
     return -1;
   }
 
-  // O_NONBLOCK,需阻塞方式打开，使用非阻塞会在取缓冲帧时一直返回EAGAIN
   if (0 > (g_camera_fd = open(DEVICE_NAME, O_RDWR, 0))) {
     LOGE(TAG, "cannot open %s:%d, %s", DEVICE_NAME, errno, strerror(errno));
     return -1;
@@ -146,7 +146,7 @@ static int __camera_query_cap()
   struct v4l2_capability cap;
 
   memset(&cap, 0, sizeof(cap));
-  if (__camera_ioctl(VIDIOC_QUERYCAP, &cap) < 0) {
+  if (0 > __camera_ioctl(VIDIOC_QUERYCAP, &cap)) {
     LOGE(TAG, "VIDIOC_QUERYCAP error: %d %s", errno, strerror(errno));
     return -1;
   }
@@ -192,7 +192,7 @@ static int __camera_set_video_fmt()
   fmt.fmt.pix.height      = CAPTURE_HEIGHT;
   fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
 
-  if (__camera_ioctl(VIDIOC_S_FMT, &fmt) < 0) {
+  if (0 > __camera_ioctl(VIDIOC_S_FMT, &fmt)) {
     LOGE(TAG, "VIDIOC_S_FMT error:%d %s", errno, strerror(errno));
     return -1;
   }
@@ -232,7 +232,7 @@ static int __camera_request_buffer()
   req.type   = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   req.memory = V4L2_MEMORY_MMAP;  // 使用mmap
 
-  if (__camera_ioctl(VIDIOC_REQBUFS, &req) < 0) {
+  if (0 > __camera_ioctl(VIDIOC_REQBUFS, &req)) {
     LOGE(TAG, "VIDIOC_REQBUFS error:%d %s", errno, strerror(errno));
     return -1;
   }
@@ -244,21 +244,20 @@ static int __camera_request_buffer()
   v4l2Buf.type   = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   v4l2Buf.memory = V4L2_MEMORY_MMAP;
 
-  g_buffers = (Buffer *)calloc(req.count, sizeof(*(g_buffers)));
-  if (!g_buffers) {
+  if (NULL == (g_buffers = (Buffer *)calloc(req.count, sizeof(*(g_buffers))))) {
     LOGT(TAG, "calloc failed,Out of memory");
     return -1;
   }
 
   for (i = 0; i < req.count; ++i) {
     v4l2Buf.index = i;
-    if (__camera_ioctl(VIDIOC_QUERYBUF, &v4l2Buf) < 0) {
+    if (0 > __camera_ioctl(VIDIOC_QUERYBUF, &v4l2Buf)) {
       LOGE(TAG, "VIDIOC_QUERYBUF [%d] error: %d %s", i, errno, strerror(errno));
       return -1;
     }
+
     g_buffers[i].length = v4l2Buf.length;
-    g_buffers[i].data   = mmap(NULL, v4l2Buf.length, PROT_READ | PROT_WRITE,
-                              MAP_SHARED, g_camera_fd, v4l2Buf.m.offset);
+    g_buffers[i].data   = mmap(NULL, v4l2Buf.length, PROT_READ | PROT_WRITE, MAP_SHARED, g_camera_fd, v4l2Buf.m.offset);
     if (MAP_FAILED == g_buffers[i].data) {
       LOGT(TAG, "buffer[%d] mmap failed", i);
       if (i > 0) {
@@ -299,33 +298,29 @@ void yuyv2yuv420(unsigned char *yuyv, unsigned char *yuv420, int width, int heig
 
 int video_capture_init()
 {
-  int ret = 0;
-  ret = __camera_open();
-  if(ret){
+  int ret;
+
+  if (0 != (ret = __camera_open())) {
     LOGE(TAG, "camera_open error!");
     return ret;
   }
 
-  ret = __camera_query_cap();
-  if(ret){
+  if (0 != (ret = __camera_query_cap())) {
     LOGE(TAG, "camera_query_cap error!");
     return ret;
   }
 
-  ret = __camera_set_video_fmt();
-  if(ret){
+  if (0 != (ret = __camera_set_video_fmt())) {
     LOGE(TAG, "camera_set_video_fmt error!");
     return ret;
   }
 
-  ret = __camera_set_fps();
-  if(ret){
+  if (0 != (ret = __camera_set_fps())) {
     LOGE(TAG, "camera_set_fps error!");
     return ret;
   }
 
-  ret = __camera_request_buffer();
-  if(ret){
+  if (0 != (ret = __camera_request_buffer())) {
     LOGE(TAG, "camera_request_buffer error!");
     return ret;
   }
