@@ -18,6 +18,7 @@
 
 #define CAPTURE_WIDTH     (1280)
 #define CAPTURE_HEIGHT    (720)
+#define CAPTURE_FPS       (15)
 
 static int                g_camera_fd  = -1;
 static Buffer*            g_buffers    = NULL;
@@ -40,10 +41,9 @@ static int __camera_ioctl(int request, void *arg)
 int video_capture_start()
 {
   int i = 0;
-  struct v4l2_buffer v4l2_buf;
+  struct v4l2_buffer v4l2_buf = { 0 };
   enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
-  memset(&v4l2_buf, 0, sizeof(v4l2_buf));
   v4l2_buf.type   = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   v4l2_buf.memory = V4L2_MEMORY_MMAP;
 
@@ -65,45 +65,55 @@ int video_capture_start()
 
 static int __camera_set_fps()
 {
-  struct v4l2_streamparm setfps;
-  memset(&setfps, 0, sizeof(setfps));
+  struct v4l2_streamparm setfps = { 0 };
   setfps.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-  __camera_ioctl(VIDIOC_G_PARM, &setfps);
+  if (0 > __camera_ioctl(VIDIOC_G_PARM, &setfps)) {
+    LOGE(TAG, "VIDIOC_G_PARM error: %d %s", errno, strerror(errno));
+    return -1;
+  }
+
   setfps.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-  setfps.parm.capture.timeperframe.numerator = 1;
-  setfps.parm.capture.timeperframe.denominator = 25;
-  __camera_ioctl(VIDIOC_G_PARM, &setfps);
-  return __camera_ioctl(VIDIOC_S_PARM, &setfps);
+  setfps.parm.capture.timeperframe.numerator   = 1;
+  setfps.parm.capture.timeperframe.denominator = CAPTURE_FPS;
+  if (0 > __camera_ioctl(VIDIOC_S_PARM, &setfps)) {
+    LOGE(TAG, "VIDIOC_S_PARM error: %d %s", errno, strerror(errno));
+    return -1;
+  }
+
+  return 0;
 }
 
 Buffer video_capture_try_get_one_frame()
 {
-  Buffer frame = {0};
+  Buffer frame = { 0 };
+  struct v4l2_buffer v4l2_buf = { 0 };
 
-  memset(&g_v4l2_buf, 0, sizeof(g_v4l2_buf));
-  g_v4l2_buf.type   = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-  g_v4l2_buf.memory = V4L2_MEMORY_MMAP;
-  memset(g_buffers[g_v4l2_buf.index].data, 0, g_v4l2_buf.length);
+  v4l2_buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+  v4l2_buf.memory = V4L2_MEMORY_MMAP;
 
+  // select等待数据
   fd_set rset;
   FD_ZERO(&rset);
   FD_SET(g_camera_fd, &rset);
-  struct timeval tv;
-  tv.tv_sec  = 1;
-  tv.tv_usec = 0;
+  struct timeval tv = {1, 0};
+  
   int retsel = select(g_camera_fd + 1, &rset, NULL, NULL, &tv);
   if (retsel <= 0) {
-    LOGE(TAG, "select failed,retsel=%d,dev=%s,errno=%d,errstr=%s", retsel, DEVICE_NAME, errno, strerror(errno));
+    LOGE(TAG, "select failed, retsel=%d, errno=%d, %s", retsel, errno, strerror(errno));
     return frame;
   }
 
-  if (0 > __camera_ioctl(VIDIOC_DQBUF, &g_v4l2_buf)) {
+  // 获取缓冲区
+  if (0 > __camera_ioctl(VIDIOC_DQBUF, &v4l2_buf)) {
     LOGE(TAG, "VIDIOC_DQBUF error: %d %s", errno, strerror(errno));
     return frame;
   }
 
-  frame.data   = g_buffers[g_v4l2_buf.index].data;
-  frame.length = g_v4l2_buf.length;
+  // 更新全局状态
+  g_v4l2_buf = v4l2_buf;
+
+  frame.data   = g_buffers[v4l2_buf.index].data;
+  frame.length = v4l2_buf.length;
   return frame;
 }
 
@@ -120,9 +130,8 @@ void video_capture_clear_one_frame()
 
 static int __camera_open()
 {
-  struct stat devStat;
+  struct stat devStat = { 0 };
 
-  memset(&devStat, 0, sizeof(devStat));
   if (0 > stat(DEVICE_NAME, &devStat)) {
     LOGE(TAG, "get device[%s] info failed: %d, %s", DEVICE_NAME, errno, strerror(errno));
     return -1;
@@ -143,9 +152,8 @@ static int __camera_open()
 
 static int __camera_query_cap()
 {
-  struct v4l2_capability cap;
+  struct v4l2_capability cap = { 0 };
 
-  memset(&cap, 0, sizeof(cap));
   if (0 > __camera_ioctl(VIDIOC_QUERYCAP, &cap)) {
     LOGE(TAG, "VIDIOC_QUERYCAP error: %d %s", errno, strerror(errno));
     return -1;
@@ -184,9 +192,8 @@ static int __camera_query_cap()
 
 static int __camera_set_video_fmt()
 {
-  struct v4l2_format fmt;
+  struct v4l2_format fmt = { 0 };
 
-  memset(&fmt, 0, sizeof(fmt));
   fmt.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   fmt.fmt.pix.width       = CAPTURE_WIDTH;
   fmt.fmt.pix.height      = CAPTURE_HEIGHT;
@@ -223,11 +230,10 @@ static int __camera_buffer_release(int num)
 
 static int __camera_request_buffer()
 {
-  struct v4l2_requestbuffers req;
-  struct v4l2_buffer v4l2Buf;
+  struct v4l2_requestbuffers req = { 0 };
+  struct v4l2_buffer v4l2Buf = { 0 };
   int i = 0;
 
-  memset(&req, 0, sizeof(req));
   req.count  = 4;  // 内核空间内存，申请4个帧缓冲空间
   req.type   = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   req.memory = V4L2_MEMORY_MMAP;  // 使用mmap
@@ -240,7 +246,6 @@ static int __camera_request_buffer()
   LOGT(TAG, "VIDIOC_REQBUFS:count=%d", req.count);
   g_buffer_num = req.count;
 
-  memset(&v4l2Buf, 0, sizeof(v4l2Buf));
   v4l2Buf.type   = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   v4l2Buf.memory = V4L2_MEMORY_MMAP;
 
@@ -334,7 +339,9 @@ void video_capture_fini()
 
   // 停止视频流
   if (g_camera_fd >= 0) {
-    __camera_ioctl(VIDIOC_STREAMOFF, &type);
+    if (0 > __camera_ioctl(VIDIOC_STREAMOFF, &type)) {
+      LOGE(TAG, "VIDIOC_STREAMOFF error:%d %s", errno, strerror(errno));
+    }
   }
 
   // 释放映射的缓冲区
