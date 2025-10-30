@@ -19,42 +19,42 @@
 #define CAPTURE_WIDTH  1280
 #define CAPTURE_HEIGHT 720
 
-static int camera_fd_ = -1;
-static Buffer* buffers_ = NULL;
-static int buffNum_ = 4;
-static struct v4l2_buffer buf;
+static int g_camera_fd    = -1;
+static Buffer* g_buffers  = NULL;
+static int g_buffer_num   = 4;
+static struct v4l2_buffer g_v4l2_buf = { 0 };
 
 #define DEVICE_NAME "/dev/video0"
 
-int camera_ioctl(int request, void *arg)
+static int __camera_ioctl(int request, void *arg)
 {
   int ret = -1;
   do {
-    ret = ioctl(camera_fd_, request, arg);
+    ret = ioctl(g_camera_fd, request, arg);
   } while (ret < 0 && EINTR == errno);
 
   return ret;
 }
 
-int camera_capture_start()
+int video_capture_start()
 {
   int i = 0;
-  struct v4l2_buffer buf;
+  struct v4l2_buffer v4l2_buf;
   enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
-  memset(&buf, 0, sizeof(buf));
-  buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-  buf.memory = V4L2_MEMORY_MMAP;
+  memset(&v4l2_buf, 0, sizeof(v4l2_buf));
+  v4l2_buf.type   = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+  v4l2_buf.memory = V4L2_MEMORY_MMAP;
 
-  for (i = 0; i < buffNum_; ++i) {
-    buf.index = i;
-    if (camera_ioctl(VIDIOC_QBUF, &buf) < 0) {
+  for (i = 0; i < g_buffer_num; ++i) {
+    v4l2_buf.index = i;
+    if (__camera_ioctl(VIDIOC_QBUF, &v4l2_buf) < 0) {
       LOGE(TAG, "VIDIOC_QBUF error:%d %s", errno, strerror(errno));
       return -1;
     }
   }
 
-  if (camera_ioctl(VIDIOC_STREAMON, &type) < 0) {
+  if (__camera_ioctl(VIDIOC_STREAMON, &type) < 0) {
     LOGE(TAG, "VIDIOC_STREAMON error:%d %s", errno, strerror(errno));
     return -1;
   }
@@ -62,63 +62,65 @@ int camera_capture_start()
   return 0;
 }
 
-int camera_set_fps()
+static int __camera_set_fps()
 {
   struct v4l2_streamparm setfps;
   memset(&setfps, 0, sizeof(setfps));
   setfps.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-  camera_ioctl(VIDIOC_G_PARM, &setfps);
+  __camera_ioctl(VIDIOC_G_PARM, &setfps);
   setfps.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   setfps.parm.capture.timeperframe.numerator = 1;
   setfps.parm.capture.timeperframe.denominator = 25;
-  camera_ioctl(VIDIOC_G_PARM, &setfps);
-  return camera_ioctl(VIDIOC_S_PARM, &setfps);
+  __camera_ioctl(VIDIOC_G_PARM, &setfps);
+  return __camera_ioctl(VIDIOC_S_PARM, &setfps);
 }
 
-Buffer get_one_frame()
+Buffer video_capture_try_get_one_frame()
 {
   Buffer frame = {0};
-  memset(&buf, 0, sizeof(buf));
-  buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-  buf.memory = V4L2_MEMORY_MMAP;
-  memset(buffers_[buf.index].data, 0, buf.length);
+
+  memset(&g_v4l2_buf, 0, sizeof(g_v4l2_buf));
+  g_v4l2_buf.type   = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+  g_v4l2_buf.memory = V4L2_MEMORY_MMAP;
+  memset(g_buffers[g_v4l2_buf.index].data, 0, g_v4l2_buf.length);
 
   fd_set rset;
   FD_ZERO(&rset);
-  FD_SET(camera_fd_, &rset);
+  FD_SET(g_camera_fd, &rset);
   struct timeval tv;
-  tv.tv_sec = 1;
+  tv.tv_sec  = 1;
   tv.tv_usec = 0;
-  int retsel = select(camera_fd_ + 1, &rset, NULL, NULL, &tv);
+  int retsel = select(g_camera_fd + 1, &rset, NULL, NULL, &tv);
   if (retsel <= 0) {
     LOGE(TAG, "select failed,retsel=%d,dev=%s,errno=%d,errstr=%s", retsel, DEVICE_NAME, errno, strerror(errno));
     return frame;
   }
 
-  if (camera_ioctl(VIDIOC_DQBUF, &buf) < 0) {
+  if (__camera_ioctl(VIDIOC_DQBUF, &g_v4l2_buf) < 0) {
     LOGE(TAG, "VIDIOC_DQBUF error: %d %s", errno, strerror(errno));
     return frame;
   }
 
-  frame.data = buffers_[buf.index].data;
-  frame.length = buf.length;
+  frame.data   = g_buffers[g_v4l2_buf.index].data;
+  frame.length = g_v4l2_buf.length;
   return frame;
 }
 
-void clear_one_frame()
+void video_capture_clear_one_frame()
 {
-  if (camera_fd_ < 0) {
+  if (g_camera_fd < 0) {
     return;
   }
 
-  if (camera_ioctl(VIDIOC_QBUF, &buf) < 0) {
+  if (__camera_ioctl(VIDIOC_QBUF, &g_v4l2_buf) < 0) {
     LOGE(TAG, "camera_read_frame VIDIOC_QBUF error:%d %s", errno, strerror(errno));
   }
 }
 
-int camera_open()
+static int __camera_open()
 {
   struct stat devStat;
+
   memset(&devStat, 0, sizeof(devStat));
   if (stat(DEVICE_NAME, &devStat) < 0) {
     LOGE(TAG, "get device[%s] info failed: %d, %s", DEVICE_NAME, errno, strerror(errno));
@@ -131,8 +133,7 @@ int camera_open()
   }
 
   // O_NONBLOCK,需阻塞方式打开，使用非阻塞会在取缓冲帧时一直返回EAGAIN
-  camera_fd_ = open(DEVICE_NAME, O_RDWR, 0);
-  if (camera_fd_ < 0) {
+  if (0 > (g_camera_fd = open(DEVICE_NAME, O_RDWR, 0))) {
     LOGE(TAG, "cannot open %s:%d, %s", DEVICE_NAME, errno, strerror(errno));
     return -1;
   }
@@ -140,12 +141,12 @@ int camera_open()
   return 0;
 }
 
-int camera_query_cap()
+static int __camera_query_cap()
 {
   struct v4l2_capability cap;
 
   memset(&cap, 0, sizeof(cap));
-  if (camera_ioctl(VIDIOC_QUERYCAP, &cap) < 0) {
+  if (__camera_ioctl(VIDIOC_QUERYCAP, &cap) < 0) {
     LOGE(TAG, "VIDIOC_QUERYCAP error: %d %s", errno, strerror(errno));
     return -1;
   }
@@ -173,7 +174,7 @@ int camera_query_cap()
 
   LOGT(TAG, "Support format:");
 
-  while (ioctl(camera_fd_, VIDIOC_ENUM_FMT, &dis_fmtdesc) != -1) {
+  while (ioctl(g_camera_fd, VIDIOC_ENUM_FMT, &dis_fmtdesc) != -1) {
     printf("\t%d.%s  %d\n", dis_fmtdesc.index + 1, dis_fmtdesc.description, dis_fmtdesc.type);
     dis_fmtdesc.index++;
   }
@@ -181,7 +182,7 @@ int camera_query_cap()
   return 0;
 }
 
-int camera_set_video_fmt()
+static int __camera_set_video_fmt()
 {
   struct v4l2_format fmt;
 
@@ -191,7 +192,7 @@ int camera_set_video_fmt()
   fmt.fmt.pix.height      = CAPTURE_HEIGHT;
   fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
 
-  if (camera_ioctl(VIDIOC_S_FMT, &fmt) < 0) {
+  if (__camera_ioctl(VIDIOC_S_FMT, &fmt) < 0) {
     LOGE(TAG, "VIDIOC_S_FMT error:%d %s", errno, strerror(errno));
     return -1;
   }
@@ -204,23 +205,23 @@ int camera_buffer_release(int num)
 {
   int i = 0;
 
-  if (NULL == buffers_) {
+  if (NULL == g_buffers) {
     return 0;
   }
 
   for (i = 0; i < num; ++i) {
-    if (buffers_[i].data != NULL && buffers_[i].data != MAP_FAILED) {
-      munmap(buffers_[i].data, buffers_[i].length);
-      buffers_[i].data = NULL;
+    if (g_buffers[i].data != NULL && g_buffers[i].data != MAP_FAILED) {
+      munmap(g_buffers[i].data, g_buffers[i].length);
+      g_buffers[i].data = NULL;
     }
   }
 
-  free(buffers_);
-  buffers_ = NULL;
+  free(g_buffers);
+  g_buffers = NULL;
   return 0;
 }
 
-int camera_request_buffer()
+static int __camera_request_buffer()
 {
   struct v4l2_requestbuffers req;
   struct v4l2_buffer v4l2Buf;
@@ -231,34 +232,34 @@ int camera_request_buffer()
   req.type   = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   req.memory = V4L2_MEMORY_MMAP;  // 使用mmap
 
-  if (camera_ioctl(VIDIOC_REQBUFS, &req) < 0) {
+  if (__camera_ioctl(VIDIOC_REQBUFS, &req) < 0) {
     LOGE(TAG, "VIDIOC_REQBUFS error:%d %s", errno, strerror(errno));
     return -1;
   }
 
   LOGT(TAG, "VIDIOC_REQBUFS:count=%d", req.count);
-  buffNum_ = req.count;
+  g_buffer_num = req.count;
 
   memset(&v4l2Buf, 0, sizeof(v4l2Buf));
   v4l2Buf.type   = V4L2_BUF_TYPE_VIDEO_CAPTURE;
   v4l2Buf.memory = V4L2_MEMORY_MMAP;
 
-  buffers_ = (Buffer *)calloc(req.count, sizeof(*(buffers_)));
-  if (!buffers_) {
+  g_buffers = (Buffer *)calloc(req.count, sizeof(*(g_buffers)));
+  if (!g_buffers) {
     LOGT(TAG, "calloc failed,Out of memory");
     return -1;
   }
 
   for (i = 0; i < req.count; ++i) {
     v4l2Buf.index = i;
-    if (camera_ioctl(VIDIOC_QUERYBUF, &v4l2Buf) < 0) {
+    if (__camera_ioctl(VIDIOC_QUERYBUF, &v4l2Buf) < 0) {
       LOGE(TAG, "VIDIOC_QUERYBUF [%d] error: %d %s", i, errno, strerror(errno));
       return -1;
     }
-    buffers_[i].length = v4l2Buf.length;
-    buffers_[i].data   = mmap(NULL, v4l2Buf.length, PROT_READ | PROT_WRITE,
-                              MAP_SHARED, camera_fd_, v4l2Buf.m.offset);
-    if (MAP_FAILED == buffers_[i].data) {
+    g_buffers[i].length = v4l2Buf.length;
+    g_buffers[i].data   = mmap(NULL, v4l2Buf.length, PROT_READ | PROT_WRITE,
+                              MAP_SHARED, g_camera_fd, v4l2Buf.m.offset);
+    if (MAP_FAILED == g_buffers[i].data) {
       LOGT(TAG, "buffer[%d] mmap failed", i);
       if (i > 0) {
         camera_buffer_release(i);
@@ -296,34 +297,34 @@ void yuyv2yuv420(unsigned char *yuyv, unsigned char *yuv420, int width, int heig
   }
 }
 
-int capture_init()
+int video_capture_init()
 {
   int ret = 0;
-  ret = camera_open();
+  ret = __camera_open();
   if(ret){
     LOGE(TAG, "camera_open error!");
     return ret;
   }
 
-  ret = camera_query_cap();
+  ret = __camera_query_cap();
   if(ret){
     LOGE(TAG, "camera_query_cap error!");
     return ret;
   }
 
-  ret = camera_set_video_fmt();
+  ret = __camera_set_video_fmt();
   if(ret){
     LOGE(TAG, "camera_set_video_fmt error!");
     return ret;
   }
 
-  ret = camera_set_fps();
+  ret = __camera_set_fps();
   if(ret){
     LOGE(TAG, "camera_set_fps error!");
     return ret;
   }
 
-  ret = camera_request_buffer();
+  ret = __camera_request_buffer();
   if(ret){
     LOGE(TAG, "camera_request_buffer error!");
     return ret;
@@ -332,23 +333,23 @@ int capture_init()
   return ret;
 }
 
-void capture_fini()
+void video_capture_fini()
 {
   enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-  
+
   // 停止视频流
-  if (camera_fd_ >= 0) {
-    camera_ioctl(VIDIOC_STREAMOFF, &type);
+  if (g_camera_fd >= 0) {
+    __camera_ioctl(VIDIOC_STREAMOFF, &type);
   }
-  
+
   // 释放映射的缓冲区
-  if (buffers_ != NULL) {
-    camera_buffer_release(buffNum_);
+  if (g_buffers != NULL) {
+    camera_buffer_release(g_buffer_num);
   }
-  
+
   // 关闭设备文件
-  if (camera_fd_ >= 0) {
-    close(camera_fd_);
-    camera_fd_ = -1;
+  if (g_camera_fd >= 0) {
+    close(g_camera_fd);
+    g_camera_fd = -1;
   }
 }

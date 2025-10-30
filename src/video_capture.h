@@ -10,12 +10,12 @@ typedef struct buffer {
     unsigned int length;
 } Buffer;
 
-int capture_init();
-int camera_capture_start();
+int video_capture_init();
+int video_capture_start();
 
-Buffer get_one_frame();
-void clear_one_frame();
-void capture_fini();
+Buffer video_capture_try_get_one_frame();
+void video_capture_clear_one_frame();
+void video_capture_fini();
 
 #ifdef __cplusplus
 }

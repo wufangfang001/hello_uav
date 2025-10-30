@@ -243,18 +243,18 @@ static void __channel_option_init(rtc_channel_options_t *channel_options)
 static void* __worker(void *args)
 {
   Buffer buffer;
-  capture_init();
-  camera_capture_start();
+  video_capture_init();
+  video_capture_start();
 
   while (!g_app.b_stop_flag) {
-    buffer = get_one_frame();
+    buffer = video_capture_try_get_one_frame();
     if (buffer.data) {
       LOGD(TAG, "video data=%p, len=%u", buffer.data, buffer.length);
-      clear_one_frame();
+      video_capture_clear_one_frame();
     }
   }
 
-  capture_fini();
+  video_capture_fini();
   return NULL;
 }
 
