@@ -1,0 +1,1 @@
+gcc -O2 -o hello-uav src/hello_uav.c -Iinc -Llib/aarch64 -Wl,-rpath,lib/aarch64 -lagora-rtc-sdk
