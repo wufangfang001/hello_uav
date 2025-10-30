@@ -12,13 +12,15 @@
 #include <unistd.h>
 
 #include "agora_log.h"
+#include "video_config.h"
 #include "video_capture.h"
 
 #define TAG  "[CAP]"
 
-#define CAPTURE_WIDTH     (1280)
-#define CAPTURE_HEIGHT    (720)
-#define CAPTURE_FPS       (15)
+typedef struct buffer {
+  void *data;
+  unsigned int length;
+} Buffer;
 
 static int                g_camera_fd  = -1;
 static Buffer*            g_buffers    = NULL;
@@ -83,9 +85,8 @@ static int __camera_set_fps()
   return 0;
 }
 
-Buffer video_capture_try_get_one_frame()
+int video_capture_try_get_one_frame(uint8_t **data)
 {
-  Buffer frame = { 0 };
   struct v4l2_buffer v4l2_buf = { 0 };
 
   v4l2_buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -100,21 +101,20 @@ Buffer video_capture_try_get_one_frame()
   int retsel = select(g_camera_fd + 1, &rset, NULL, NULL, &tv);
   if (retsel <= 0) {
     LOGE(TAG, "select failed, retsel=%d, errno=%d, %s", retsel, errno, strerror(errno));
-    return frame;
+    return 0;
   }
 
   // 获取缓冲区
   if (0 > __camera_ioctl(VIDIOC_DQBUF, &v4l2_buf)) {
     LOGE(TAG, "VIDIOC_DQBUF error: %d %s", errno, strerror(errno));
-    return frame;
+    return 0;
   }
 
   // 更新全局状态
   g_v4l2_buf = v4l2_buf;
 
-  frame.data   = g_buffers[v4l2_buf.index].data;
-  frame.length = v4l2_buf.length;
-  return frame;
+  *data = g_buffers[v4l2_buf.index].data;
+  return v4l2_buf.length;
 }
 
 void video_capture_clear_one_frame()
@@ -275,13 +275,13 @@ static int __camera_request_buffer()
   return 0;
 }
 
-void yuyv2yuv420(unsigned char *yuyv, unsigned char *yuv420, int width, int height)
+void yuyv2yuv420(uint8_t *yuyv, uint8_t *yuv420, int width, int height)
 {
   int pixs = width * height;
-  unsigned char *y = yuv420;
-  unsigned char *u = yuv420 + pixs;
-  unsigned char *v = yuv420 + pixs + (pixs >> 2);
-  unsigned char *start = yuyv;
+  uint8_t *y = yuv420;
+  uint8_t *u = yuv420 + pixs;
+  uint8_t *v = yuv420 + pixs + (pixs >> 2);
+  uint8_t *start = yuyv;
 
   /*处理Y分量*/
   for (int j = 0; j < pixs * 2; j = j + 2) {
@@ -330,7 +330,7 @@ int video_capture_init()
   return ret;
 }
 
-void video_capture_fini()
+int video_capture_stop()
 {
   enum v4l2_buf_type type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 
@@ -338,9 +338,15 @@ void video_capture_fini()
   if (g_camera_fd >= 0) {
     if (0 > __camera_ioctl(VIDIOC_STREAMOFF, &type)) {
       LOGE(TAG, "VIDIOC_STREAMOFF error:%d %s", errno, strerror(errno));
+      return -1;
     }
   }
 
+  return 0;
+}
+
+void video_capture_fini()
+{
   // 释放映射的缓冲区
   if (g_buffers != NULL) {
     __camera_buffer_release(g_buffer_num);

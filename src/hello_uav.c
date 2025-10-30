@@ -4,17 +4,20 @@
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 #include "agora_log.h"
 #include "agora_rtc_api.h"
+#include "video_config.h"
 #include "video_capture.h"
+#include "h264_encode.h"
 
 
-#define TAG     "[main]"
+#define TAG     "[demo]"
 
-#define BWE_MIN_BITRATE   (100000)
-#define BWE_MAX_BITRATE   (1000000)
-#define BWE_START_BITRATE (500000)
+#define BWE_MIN_BITRATE   VIDEO_ENCODE_TARGET_BPS / 4
+#define BWE_MAX_BITRATE   VIDEO_ENCODE_TARGET_BPS * 2
+#define BWE_START_BITRATE VIDEO_ENCODE_TARGET_BPS
 
 typedef struct {
   char            appid[64];
@@ -189,11 +192,13 @@ static void __on_license_failed(connection_id_t conn_id, int reason)
 static void __on_target_bitrate_changed(connection_id_t conn_id, uint32_t target_bps)
 {
   LOGT(TAG, "[conn-%u] Bandwidth change detected. Please adjust encoder bitrate to %u kbps", conn_id, target_bps / 1000);
+  h264_encode_set_target_bps(target_bps);
 }
 
 static void __on_key_frame_gen_req(connection_id_t conn_id, uint32_t uid, video_stream_type_e stream_type)
 {
   LOGT(TAG, "[conn-%u] Frame loss detected. Please notify the encoder to generate key frame immediately", conn_id);
+  h264_encode_generate_key_frame();
 }
 
 static void __on_rtc_stats(connection_id_t conn_id, rtc_stats_t stats)
@@ -242,19 +247,44 @@ static void __channel_option_init(rtc_channel_options_t *channel_options)
 
 static void* __worker(void *args)
 {
-  Buffer buffer;
+  uint8_t *yuv_data;
+  int yuv_data_len;
+  uint8_t *h264_data;
+  int h264_data_len;
+  uint8_t *yuv420;
+  video_frame_info_t frame_info = {.data_type = VIDEO_DATA_TYPE_H264,
+                                   .stream_type = VIDEO_STREAM_HIGH,
+                                   .frame_type = VIDEO_FRAME_AUTO_DETECT,
+                                   .frame_rate = 0,
+                                   .rotation = VIDEO_ORIENTATION_0};
+
+  h264_encode_init();
   video_capture_init();
   video_capture_start();
 
+  yuv420 = (uint8_t *)malloc(CAPTURE_WIDTH * CAPTURE_HEIGHT / 2 * 3);
+
   while (!g_app.b_stop_flag) {
-    buffer = video_capture_try_get_one_frame();
-    if (buffer.data) {
-      LOGD(TAG, "video data=%p, len=%u", buffer.data, buffer.length);
+    yuv_data_len = video_capture_try_get_one_frame(&yuv_data);
+    if (yuv_data_len > 0) {
+      LOGD(TAG, "video data=%p, len=%u", yuv_data, yuv_data_len);
+
+      yuyv2yuv420(yuv_data, yuv420, CAPTURE_WIDTH, CAPTURE_HEIGHT);
+
+      h264_data_len = h264_encode_encoding(yuv420, &h264_data);
+      if (h264_data_len > 0) {
+        agora_rtc_send_video_data(g_app.conn_id, h264_data, h264_data_len, &frame_info);
+      }
+
       video_capture_clear_one_frame();
     }
   }
 
+  video_capture_stop();
   video_capture_fini();
+  h264_encode_fini();
+  free(yuv420);
+
   return NULL;
 }
 
