@@ -67,8 +67,6 @@ int h264_encode_encoding(uint8_t *yuv420, uint8_t **h264)
     return -1;
   }
 
-  *h264 = g_h264_buffer;
-
   while (1) {
     memset(&packet, 0, sizeof(packet));
     if (0 != nvmpi_encoder_get_packet(g_ctx, &packet)) {
@@ -77,13 +75,14 @@ int h264_encode_encoding(uint8_t *yuv420, uint8_t **h264)
 
     if (total_len >= g_buffer_len) {
       g_buffer_len *= 2;
-      *h264 = (uint8_t *)realloc(*h264, g_buffer_len);
+      g_h264_buffer = (uint8_t *)realloc(g_h264_buffer, g_buffer_len);
     }
 
-    memcpy(*h264 + total_len, packet.payload, packet.payload_size);
+    memcpy(g_h264_buffer + total_len, packet.payload, packet.payload_size);
     total_len += packet.payload_size;
   }
 
+  *h264 = g_h264_buffer;
   return total_len;
 }
 
