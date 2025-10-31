@@ -113,12 +113,12 @@ int h264_encode_set_target_bps(int bps)
     return 0;
   }
 
-  g_current_bps = bps;
   if (0 > nvmpi_encoder_setBitrate(g_ctx, g_current_bps)) {
     LOGE(TAG, "nvmpi_encoder_setBitrate error.");
     return -1;
   }
 
+  g_current_bps = bps;
   LOGT(TAG, "nvmpi_encoder_setBitrate[%dKbps] success", g_current_bps / 1000);
   return 0;
 }

@@ -7,7 +7,7 @@ extern "C" {
 
 #define CAPTURE_WIDTH     (1280)
 #define CAPTURE_HEIGHT    (720)
-#define CAPTURE_FPS       (15)
+#define CAPTURE_FPS       (25)
 
 #define VIDEO_ENCODE_TARGET_BPS (1000 * 1000)
 
