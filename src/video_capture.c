@@ -18,7 +18,7 @@
 #define TAG  "[CAP]"
 
 typedef struct buffer {
-  void *data;
+  void         *data;
   unsigned int length;
 } Buffer;
 
@@ -113,7 +113,7 @@ int video_capture_try_get_one_frame(uint8_t **data)
   // 更新全局状态
   g_v4l2_buf = v4l2_buf;
 
-  *data = g_buffers[v4l2_buf.index].data;
+  *data = (uint8_t *)g_buffers[v4l2_buf.index].data;
   return v4l2_buf.length;
 }
 
@@ -317,10 +317,12 @@ int video_capture_init()
     return ret;
   }
 
+#if 0
   if (0 != (ret = __camera_set_fps())) {
     LOGE(TAG, "camera_set_fps error!");
     return ret;
   }
+#endif
 
   if (0 != (ret = __camera_request_buffer())) {
     LOGE(TAG, "camera_request_buffer error!");

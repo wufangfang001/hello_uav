@@ -267,12 +267,9 @@ static void* __worker(void *args)
   while (!g_app.b_stop_flag) {
     yuv_data_len = video_capture_try_get_one_frame(&yuv_data);
     if (yuv_data_len > 0) {
-      LOGD(TAG, "video data=%p, len=%u", yuv_data, yuv_data_len);
-
       yuyv2yuv420(yuv_data, yuv420, CAPTURE_WIDTH, CAPTURE_HEIGHT);
 
-      h264_data_len = h264_encode_encoding(yuv420, &h264_data);
-      if (h264_data_len > 0) {
+      if (0 < (h264_data_len = h264_encode_encoding(yuv420, &h264_data))) {
         agora_rtc_send_video_data(g_app.conn_id, h264_data, h264_data_len, &frame_info);
       }
 
