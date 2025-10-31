@@ -11,6 +11,8 @@
 
 static nvmpictx* g_ctx         = NULL;
 static int       g_current_bps = VIDEO_ENCODE_TARGET_BPS;
+static uint8_t*  g_h264_buffer = NULL;
+static int       g_buffer_len  = H264_DATA_BUFFER_LEN;
 
 int h264_encode_init()
 {
@@ -31,6 +33,7 @@ int h264_encode_init()
     return -1;
   }
 
+  g_h264_buffer = (uint8_t *)malloc(g_buffer_len);
   g_current_bps = VIDEO_ENCODE_TARGET_BPS;
   LOGT(TAG, "nvmpi_create_encoder success.");
   return 0;
@@ -40,6 +43,7 @@ int h264_encode_encoding(uint8_t *yuv420, uint8_t **h264)
 {
   nvFrame frame   = { 0 };
   nvPacket packet = { 0 };
+  int total_len = 0;
 
   *h264 = NULL;
 
@@ -63,9 +67,7 @@ int h264_encode_encoding(uint8_t *yuv420, uint8_t **h264)
     return -1;
   }
 
-  int total_len = 0;
-  int buffer_len = H264_DATA_BUFFER_LEN;
-  *h264 = (uint8_t *)malloc(buffer_len);
+  *h264 = g_h264_buffer;
 
   while (1) {
     memset(&packet, 0, sizeof(packet));
@@ -73,9 +75,9 @@ int h264_encode_encoding(uint8_t *yuv420, uint8_t **h264)
       break;
     }
 
-    if (total_len >= buffer_len) {
-      buffer_len *= 2;
-      *h264 = (uint8_t *)realloc(*h264, buffer_len);
+    if (total_len >= g_buffer_len) {
+      g_buffer_len *= 2;
+      *h264 = (uint8_t *)realloc(*h264, g_buffer_len);
     }
 
     memcpy(*h264 + total_len, packet.payload, packet.payload_size);
@@ -127,5 +129,11 @@ void h264_encode_fini()
 {
   nvmpi_encoder_close(g_ctx);
   g_ctx = NULL;
+
+  if (g_h264_buffer) {
+    free(g_h264_buffer);
+    g_h264_buffer = NULL;
+  }
+
   LOGT(TAG, "h264_encode_fini success.");
 }
