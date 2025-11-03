@@ -317,7 +317,7 @@ int video_capture_init()
     return ret;
   }
 
-#if 0
+#if 0 /** 当前使用的摄像头不支持设置帧率，默认25帧 */
   if (0 != (ret = __camera_set_fps())) {
     LOGE(TAG, "camera_set_fps error!");
     return ret;
