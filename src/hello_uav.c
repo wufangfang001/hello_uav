@@ -5,6 +5,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include "agora_log.h"
 #include "agora_rtc_api.h"
@@ -247,6 +248,7 @@ static void __channel_option_init(rtc_channel_options_t *channel_options)
 
 static void* __worker(void *args)
 {
+  int err;
   uint8_t *yuv_data;
   int yuv_data_len;
   uint8_t *h264_data;
@@ -258,9 +260,14 @@ static void* __worker(void *args)
                                    .frame_rate = 0,
                                    .rotation = VIDEO_ORIENTATION_0};
 
-  h264_encode_init();
-  video_capture_init();
-  video_capture_start();
+  err = h264_encode_init();
+  assert(err == 0);
+
+  err = video_capture_init();
+  assert(err == 0);
+
+  err = video_capture_start();
+  assert(err == 0);
 
   yuv420 = (uint8_t *)malloc(CAPTURE_WIDTH * CAPTURE_HEIGHT / 2 * 3);
 
@@ -312,22 +319,22 @@ int main(int argc, char **argv)
   __rtc_service_option_init(&service_opt);
   if (0 > (rval = agora_rtc_init(g_app.appid, &event_handler, &service_opt))) {
     LOGE(TAG, "Failed to initialize Agora sdk, reason: %s", agora_rtc_err_2_str(rval));
-    return -1;
+    goto L_AGORA_RTC_INIT_FAILED;
   }
 
   if (0 > (rval = agora_rtc_create_connection(&g_app.conn_id))) {
     LOGE(TAG, "Failed to create connection, reason: %s", agora_rtc_err_2_str(rval));
-    return -1;
+    goto L_AGORA_RTC_CREATE_CONNECTION_FAILED;
   }
 
   if (0 > (rval = agora_rtc_set_bwe_param(g_app.conn_id, BWE_MIN_BITRATE, BWE_MAX_BITRATE, BWE_START_BITRATE))) {
     LOGE(TAG, "Failed set bwe param, reason: %s", agora_rtc_err_2_str(rval));
-    return -1;
+    goto L_AGORA_RTC_SET_BWE_PARAM_FAILED;
   }
 
   if (0 > (rval = agora_rtc_join_channel(g_app.conn_id, g_app.channel, 0, g_app.token, &channel_options))) {
     LOGE(TAG, "Failed to join channel \"%s\", reason: %s", g_app.channel, agora_rtc_err_2_str(rval));
-    return -1;
+    goto L_AGORA_RTC_JOIN_CHANNEL_FAILED;
   }
 
   while (!g_app.b_connected_flag && !g_app.b_stop_flag) {
@@ -342,8 +349,14 @@ int main(int argc, char **argv)
 
   __worker_thread_destroy();
   agora_rtc_leave_channel(g_app.conn_id);
+
+L_AGORA_RTC_JOIN_CHANNEL_FAILED:
+L_AGORA_RTC_SET_BWE_PARAM_FAILED:
   agora_rtc_destroy_connection(g_app.conn_id);
+
+L_AGORA_RTC_CREATE_CONNECTION_FAILED:
   agora_rtc_fini();
 
+L_AGORA_RTC_INIT_FAILED:
   return 0;
 }
