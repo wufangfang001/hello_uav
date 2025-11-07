@@ -88,7 +88,7 @@
 #include "NGIAgoraVideoTrack.h"
 
 #define DEFAULT_CONNECT_TIMEOUT_MS (3000)
-#define DEFAULT_FRAME_RATE         (25)
+static uint32_t g_video_fps = 25;
 
 static agora::base::IAgoraService* service = nullptr;
 static agora::agora_refptr<agora::rtc::IRtcConnection> connection = nullptr;
@@ -135,6 +135,7 @@ int agora_native_init(agora_config_t *config)
     return 0;
   }
 
+  g_video_fps = config->video_fps;
   __notify_function_register(config);
 
   // Create Agora service
@@ -329,11 +330,11 @@ int agora_native_send_h264_data(uint8_t *data, size_t len, bool isKeyFrame)
   agora::rtc::EncodedVideoFrameInfo videoEncodedFrameInfo;
   videoEncodedFrameInfo.rotation = agora::rtc::VIDEO_ORIENTATION_0;
   videoEncodedFrameInfo.codecType = agora::rtc::VIDEO_CODEC_H264;
-  videoEncodedFrameInfo.framesPerSecond = DEFAULT_FRAME_RATE;
+  videoEncodedFrameInfo.framesPerSecond = g_video_fps;
   videoEncodedFrameInfo.frameType =
       (isKeyFrame ? agora::rtc::VIDEO_FRAME_TYPE::VIDEO_FRAME_TYPE_KEY_FRAME
                   : agora::rtc::VIDEO_FRAME_TYPE::VIDEO_FRAME_TYPE_DELTA_FRAME);
-  
+
   // 修复：检查发送结果
   bool success = videoFrameSender->sendEncodedVideoImage(data, len, videoEncodedFrameInfo);
   if (!success) {
