@@ -9,6 +9,12 @@ hello uav是基于RTSA和native的无人机场景demo
 3、运行demo  
 ./hello-uav --appid 'your appid' --channel 'your channle' --token 'your token'  
 
+使用RTSA通道运行命令：  
+LD_LIBRARY_PATH="lib:$LD_LIBRARY_PATH" ./hello-uav --appId aab8b8f5a8cd4469a63042fcfafe7063 --channelId hello-uav --fps 25 --enableRtsaSdk 1 --bitrate 1500000  
+
+使用native通道运行命令：  
+LD_LIBRARY_PATH="lib:$LD_LIBRARY_PATH" ./hello-uav --token aab8b8f5a8cd4469a63042fcfafe7063 --channelId hello-uav --fps 25 --enableRtsaSdk 0 --bitrate 1500000    --enableMultipath 1  
+
 4、支持RTSA和native通道切换  
 --enableRtsaSdk 1 切换到RTSA；--enableRtsaSdk 0 切换到native  
 
