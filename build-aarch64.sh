@@ -1,4 +1,4 @@
-aarch64-linux-gnu-g++ -O2 -o hello-uav \
+g++ -O2 -o hello-uav \
     src/hello_uav.c \
     src/core/video_capture.c \
     src/core/h264_encode.c \
