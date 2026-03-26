@@ -221,7 +221,7 @@ int agora_rtsa_init(agora_config_t *config)
     goto L_AGORA_RTC_CREATE_CONNECTION_FAILED;
   }
 
-  if (0 > (rval = agora_rtc_set_bwe_param(g_conn_id, config->video_bps / 4, config->video_bps * 2, config->video_bps))) {
+  if (0 > (rval = agora_rtc_set_bwe_param(g_conn_id, config->video_bps / 4, config->video_bps, config->video_bps/2))) {
     LOGE(TAG, "Failed set bwe param, reason: %s", agora_rtc_err_2_str(rval));
     goto L_AGORA_RTC_SET_BWE_PARAM_FAILED;
   }
@@ -258,9 +258,9 @@ void agora_rtsa_fini(void)
   LOGT(TAG, "agora rtsa fini success.");
 }
 
-int agora_rtsa_send_h264_data(uint8_t *data, size_t len)
+int agora_rtsa_send_video_data(uint8_t *data, size_t len, VideoCodecType codec_type)
 {
-  video_frame_info_t frame_info = {.data_type = VIDEO_DATA_TYPE_H264,
+  video_frame_info_t frame_info = {.data_type = (codec_type == VideoCodecTypeH265) ? VIDEO_DATA_TYPE_H265 : VIDEO_DATA_TYPE_H264,
                                    .stream_type = VIDEO_STREAM_HIGH,
                                    .frame_type = VIDEO_FRAME_AUTO_DETECT,
                                    .frame_rate = 0,

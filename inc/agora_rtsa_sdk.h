@@ -9,7 +9,7 @@ extern "C" {
 
 int agora_rtsa_init(agora_config_t *config);
 void agora_rtsa_fini(void);
-int agora_rtsa_send_h264_data(uint8_t *data, size_t len);
+int agora_rtsa_send_video_data(uint8_t *data, size_t len, VideoCodecType codec_type);
 
 #ifdef __cplusplus
 }

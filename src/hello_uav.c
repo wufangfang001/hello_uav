@@ -6,7 +6,7 @@
 
 #include "agora_config.h"
 #include "agora_log.h"
-#include "h264_encode.h"
+#include "video_encode.h"
 #include "video_capture.h"
 #include "agora_rtsa_sdk.h"
 #include "agora_native_sdk.h"
@@ -73,6 +73,7 @@ static void __config_print()
   LOGT(TAG, "fps=%u", g_config.video_fps);
   LOGT(TAG, "enableMultiPath=%u", g_config.b_enable_multi_path);
   LOGT(TAG, "enableRtsaSdk=%u", g_config.b_enable_rtsa);
+  LOGT(TAG, "codec=%s", g_config.video_codec_type == VideoCodecTypeH265 ? "h265" : "h264");
   LOGT(TAG, "---------------------------------");
 }
 
@@ -87,11 +88,12 @@ static void __app_print_usage(int argc, char **argv)
   printf(" -m, --enableMultipath      : enable multipath\n");
   printf(" -r, --enableRtsaSdk        : use rtsa sdk, otherwise use native sdk\n");
   printf(" -t, --token                : token, default NULL\n");
+  printf(" -C, --codec                : video codec type (h264 or h265), default h264\n");
 }
 
 static int __app_parse_args(int argc, char **argv)
 {
-  const char *short_option = "ha:b:c:f:m:r:t:";
+  const char *short_option = "ha:b:c:f:m:r:t:C:";
   const struct option long_option[] = { { "help",            0, NULL, 'h' },
                                         { "appId",           1, NULL, 'a' },
                                         { "bitrate",         1, NULL, 'b' },
@@ -100,6 +102,7 @@ static int __app_parse_args(int argc, char **argv)
                                         { "enableMultipath", 1, NULL, 'm' },
                                         { "enableRtsaSdk",   1, NULL, 'r' },
                                         { "token",           1, NULL, 't' },
+                                        { "codec",           1, NULL, 'C' },
                                         { 0,                 0, 0,     0  } };
   int ch = -1;
   int optidx = 0;
@@ -134,6 +137,13 @@ static int __app_parse_args(int argc, char **argv)
       case 't':
         snprintf(g_config.token, sizeof(g_config.token), "%s", optarg);
         break;
+      case 'C':
+        if (0 == strcmp(optarg, "h265")) {
+          g_config.video_codec_type = VideoCodecTypeH265;
+        } else {
+          g_config.video_codec_type = VideoCodecTypeH264;
+        }
+        break;
       default:
         break;
     }
@@ -145,13 +155,13 @@ static int __app_parse_args(int argc, char **argv)
 static void __sdk_target_bitrate_change(uint32_t target_bps)
 {
   LOGT(TAG, "target bps change. bps=%u", target_bps);
-  h264_encode_set_target_bps(target_bps);
+  video_encode_set_target_bps(target_bps);
 }
 
 static void __sdk_key_frame_request(void)
 {
   LOGT(TAG, "key frame request.");
-  h264_encode_generate_key_frame();
+  video_encode_generate_key_frame();
 }
 
 static void __sdk_should_stop(void)
@@ -178,12 +188,12 @@ static void __agora_rtc_fini()
   }
 }
 
-static void __agora_rtc_send_h264(uint8_t *data, size_t len, bool keyframe)
+static void __agora_rtc_send_video(uint8_t *data, size_t len, bool keyframe)
 {
   if (g_config.b_enable_rtsa) {
-    agora_rtsa_send_h264_data(data, len);
+    agora_rtsa_send_video_data(data, len, g_config.video_codec_type);
   } else {
-    agora_native_send_h264_data(data, len, keyframe);
+    agora_native_send_video_data(data, len, keyframe, g_config.video_codec_type);
   }
 }
 
@@ -191,13 +201,13 @@ static void* __worker(void *args)
 {
   uint8_t *yuv_data;
   int yuv_data_len;
-  uint8_t *h264_data;
-  int h264_data_len;
+  uint8_t *encoded_data;
+  int encoded_data_len;
   bool keyframe;
   uint8_t *yuv420;
 
   __agora_rtc_init();
-  h264_encode_init(g_config.video_width, g_config.video_height, g_config.video_fps, g_config.video_bps);
+  video_encode_init(g_config.video_codec_type, g_config.video_width, g_config.video_height, g_config.video_fps, g_config.video_bps);
   video_capture_init(g_config.video_width, g_config.video_height, g_config.video_fps);
   video_capture_start();
 
@@ -208,8 +218,8 @@ static void* __worker(void *args)
     if (yuv_data_len > 0) {
       yuyv2yuv420(yuv_data, yuv420, g_config.video_width, g_config.video_height);
 
-      if (0 < (h264_data_len = h264_encode_encoding(yuv420, &h264_data, &keyframe))) {
-        __agora_rtc_send_h264(h264_data, h264_data_len, keyframe);
+      if (0 < (encoded_data_len = video_encode_encoding(yuv420, &encoded_data, &keyframe))) {
+        __agora_rtc_send_video(encoded_data, encoded_data_len, keyframe);
       }
 
       video_capture_clear_one_frame();
@@ -218,7 +228,7 @@ static void* __worker(void *args)
 
   video_capture_stop();
   video_capture_fini();
-  h264_encode_fini();
+  video_encode_fini();
   free(yuv420);
   __agora_rtc_fini();
 

@@ -9,7 +9,7 @@ extern "C" {
 
 int agora_native_init(agora_config_t *config);
 void agora_native_fini(void);
-int agora_native_send_h264_data(uint8_t *data, size_t len, bool isKeyFrame);
+int agora_native_send_video_data(uint8_t *data, size_t len, bool isKeyFrame, VideoCodecType codec_type);
 void agora_native_target_bitrate_change(uint32_t target_bps);
 void agora_native_keyframe_request(void);
 

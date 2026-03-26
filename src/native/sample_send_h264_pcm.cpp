@@ -150,7 +150,7 @@ int agora_native_init(agora_config_t *config)
   ccfg.autoSubscribeAudio = false;
   ccfg.autoSubscribeVideo = false;
   ccfg.clientRoleType = agora::rtc::CLIENT_ROLE_BROADCASTER;
-  ccfg.maxSendBitrate = config->video_bps;
+  //ccfg.maxSendBitrate = config->video_bps;
   connection = service->createRtcConnection(ccfg);
   if (!connection) {
     AG_LOG(ERROR, "Failed to create Agora connection!");
@@ -243,6 +243,7 @@ int agora_native_init(agora_config_t *config)
 
   agora::rtc::SenderOptions option;
   option.ccMode = agora::rtc::TCcMode::CC_ENABLED;
+  option.targetBitrate = config->video_bps / 1000;
   customVideoTrack = service->createCustomVideoTrack(videoFrameSender, option);
   if (!customVideoTrack) {
     AG_LOG(ERROR, "Failed to create video track!");
@@ -320,7 +321,7 @@ void agora_native_fini(void)
   g_initialized = false;
 }
 
-int agora_native_send_h264_data(uint8_t *data, size_t len, bool isKeyFrame)
+int agora_native_send_video_data(uint8_t *data, size_t len, bool isKeyFrame, VideoCodecType codec_type)
 {
   if (!g_initialized || !videoFrameSender) {
     AG_LOG(ERROR, "Agora service not initialized or video sender not available");
@@ -329,7 +330,9 @@ int agora_native_send_h264_data(uint8_t *data, size_t len, bool isKeyFrame)
 
   agora::rtc::EncodedVideoFrameInfo videoEncodedFrameInfo;
   videoEncodedFrameInfo.rotation = agora::rtc::VIDEO_ORIENTATION_0;
-  videoEncodedFrameInfo.codecType = agora::rtc::VIDEO_CODEC_H264;
+  videoEncodedFrameInfo.codecType = (codec_type == VideoCodecTypeH265)
+      ? agora::rtc::VIDEO_CODEC_H265
+      : agora::rtc::VIDEO_CODEC_H264;
   videoEncodedFrameInfo.framesPerSecond = g_video_fps;
   videoEncodedFrameInfo.frameType =
       (isKeyFrame ? agora::rtc::VIDEO_FRAME_TYPE::VIDEO_FRAME_TYPE_KEY_FRAME
@@ -338,7 +341,7 @@ int agora_native_send_h264_data(uint8_t *data, size_t len, bool isKeyFrame)
   // 修复：检查发送结果
   bool success = videoFrameSender->sendEncodedVideoImage(data, len, videoEncodedFrameInfo);
   if (!success) {
-    AG_LOG(ERROR, "Failed to send H264 data: error code %d", success);
+    AG_LOG(ERROR, "Failed to send video data: error code %d", success);
   }
 
   return success ? 0 : -1;

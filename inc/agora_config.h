@@ -8,6 +8,11 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 
+typedef enum {
+  VideoCodecTypeH264 = 0,
+  VideoCodecTypeH265 = 1,
+} VideoCodecType;
+
 typedef void (* f_sdk_target_bitrate_change)(uint32_t target_bps);
 typedef void (* f_sdk_key_frame_request)(void);
 typedef void (* f_sdk_should_stop)(void);
@@ -28,6 +33,8 @@ typedef struct {
   f_sdk_target_bitrate_change f_bps_change;
   f_sdk_key_frame_request     f_key_frame;
   f_sdk_should_stop           f_stop;
+
+  VideoCodecType video_codec_type;
 } agora_config_t;
 
 #ifdef __cplusplus

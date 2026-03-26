@@ -1,0 +1,6 @@
+{
+  "clangd.path": "/usr/lib/llvm-10/bin/clangd",
+  "clangd.arguments": [
+    "--compile-commands-dir=${workspaceFolder}/build"
+  ]
+}
