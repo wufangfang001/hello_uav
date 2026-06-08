@@ -11,11 +11,6 @@
 
 #define TAG     "[demo]"
 
-#define BWE_MIN_BITRATE   VIDEO_ENCODE_TARGET_BPS / 4
-#define BWE_MAX_BITRATE   VIDEO_ENCODE_TARGET_BPS * 2
-#define BWE_START_BITRATE VIDEO_ENCODE_TARGET_BPS
-
-
 static connection_id_t g_conn_id = CONNECTION_ID_INVALID;
 
 static bool g_b_connected_flag = false;

@@ -126,7 +126,7 @@ int video_encode_set_target_bps(int bps)
     return 0;
   }
 
-  if (0 > nvmpi_encoder_setBitrate(g_ctx, g_current_bps)) {
+  if (0 > nvmpi_encoder_setBitrate(g_ctx, bps)) {
     LOGE(TAG, "%s nvmpi_encoder_setBitrate error.", g_codec_name);
     return -1;
   }
