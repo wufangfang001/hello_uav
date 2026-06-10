@@ -30,6 +30,13 @@ LD_LIBRARY_PATH="lib:$LD_LIBRARY_PATH" ./hello-uav --appId aab8b8f5a8cd4469a6304
 使用native通道运行命令：  
 LD_LIBRARY_PATH="lib:$LD_LIBRARY_PATH" ./hello-uav --token aab8b8f5a8cd4469a63042fcfafe7063 --channelId hello-uav --fps 25 --enableRtsaSdk 0 --bitrate 1500000    --enableMultipath 1  
 
+可选视频尺寸参数：
+- 使用短选项 `-W <width>` 或长选项 `--videoWidth <width>` 指定视频宽度（例如 `-W 1280`）。
+- 使用短选项 `-H <height>` 或长选项 `--videoHeight <height>` 指定视频高度（例如 `-H 720`）。
+
+示例（指定分辨率）：
+LD_LIBRARY_PATH="lib:$LD_LIBRARY_PATH" ./hello-uav --appId aab8b8f5a8cd4469a63042fcfafe7063 --channelId hello-uav --fps 25 --bitrate 1500000 -W 1920 -H 1080
+
 4、支持RTSA和native通道切换  
 --enableRtsaSdk 1 切换到RTSA；--enableRtsaSdk 0 切换到native  
 

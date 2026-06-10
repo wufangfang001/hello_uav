@@ -95,6 +95,8 @@ static void __app_print_usage(int argc, char **argv)
   printf(" -d, --videoDevice          : video device/entity name, default /dev/video0\n");
   printf(" -D, --videoDevId           : media device id, default 0\n");
   printf(" -f, --fps                  : video fps\n");
+  printf(" -W, --videoWidth           : video width\n");
+  printf(" -H, --videoHeight          : video height\n");
   printf(" -m, --enableMultipath      : enable multipath\n");
   printf(" -p, --videoPipeId          : media pipe id, default 0\n");
   printf(" -r, --enableRtsaSdk        : use rtsa sdk, otherwise use native sdk\n");
@@ -105,7 +107,7 @@ static void __app_print_usage(int argc, char **argv)
 
 static int __app_parse_args(int argc, char **argv)
 {
-  const char *short_option = "ha:b:c:d:D:f:m:p:r:t:v:C:";
+  const char *short_option = "ha:b:c:d:D:f:m:p:r:t:v:C:W:H:";
   const struct option long_option[] = { { "help",            0, NULL, 'h' },
                                         { "appId",           1, NULL, 'a' },
                                         { "bitrate",         1, NULL, 'b' },
@@ -119,6 +121,8 @@ static int __app_parse_args(int argc, char **argv)
                                         { "token",           1, NULL, 't' },
                                         { "videoChnId",      1, NULL, 'v' },
                                         { "codec",           1, NULL, 'C' },
+                                        { "videoWidth",      1, NULL, 'W' },
+                                        { "videoHeight",     1, NULL, 'H' },
                                         { 0,                 0, 0,     0  } };
   int ch = -1;
   int optidx = 0;
@@ -149,6 +153,12 @@ static int __app_parse_args(int argc, char **argv)
         break;
       case 'f':
         g_config.video_fps = strtol(optarg, NULL, 10);
+        break;
+      case 'W':
+        g_config.video_width = strtol(optarg, NULL, 10);
+        break;
+      case 'H':
+        g_config.video_height = strtol(optarg, NULL, 10);
         break;
       case 'm':
         g_config.b_enable_multi_path = strtol(optarg, NULL, 10);
