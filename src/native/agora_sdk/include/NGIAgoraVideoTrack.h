@@ -8,6 +8,7 @@
 #pragma once  // NOLINT(build/header_guard)
 
 #include "AgoraBase.h"
+#include "AgoraMediaBase.h"
 #include <api/aosl_ref.h>
 
 #ifndef OPTIONAL_OVERRIDE
@@ -229,6 +230,29 @@ class IVideoTrack : public RefCountInterface {
    * - < 0: Failure.
    */
   virtual int unregisterVideoEncodedFrameObserver(agora::media::IVideoEncodedFrameObserver* encodedObserver) {return -1;};
+
+  virtual int enableAndUpdateVideoWatermarks(WatermarkConfig* watermark_configs, int length, bool visible_in_preview) { return -ERR_NOT_SUPPORTED; }
+  virtual int disableVideoWatermarks() { return -ERR_NOT_SUPPORTED; }
+  /**
+   * Registers an \ref agora::rtc::IVideoMetadataObserver "IVideoMetadataObserver" object.
+   * @param metadataObserver The pointer to the `IVideoMetadataObserver` object.
+   * @return
+   * - 0: Success.
+   * - < 0: Failure.
+   */
+  virtual int registerVideoMetadataObserver(IMetadataObserver* metadataObserver, aosl_ref_t ares = AOSL_REF_INVALID) {
+    return 0;
+  }
+  /**
+   * Unregisters an \ref agora::rtc::IVideoMetadataObserver "IVideoMetadataObserver" object.
+   * @param metadataObserver The pointer to the `IVideoMetadataObserver` object.
+   * @return
+   * - 0: Success.
+   * - < 0: Failure.
+   */
+  virtual int unregisterVideoMetadataObserver(IMetadataObserver* metadataObserver) {
+     return 0;
+  }
 
  protected:
   ~IVideoTrack() {}

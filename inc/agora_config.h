@@ -33,6 +33,7 @@ typedef struct {
 
   bool b_enable_multi_path;
   bool b_enable_rtsa;
+  bool b_enable_lan_accelerate;
 
   f_sdk_target_bitrate_change f_bps_change;
   f_sdk_key_frame_request     f_key_frame;

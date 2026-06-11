@@ -38,6 +38,7 @@ static void __config_init(void)
 
   g_config.b_enable_multi_path = false;
   g_config.b_enable_rtsa       = false;
+  g_config.b_enable_lan_accelerate = false;
 
   g_config.f_bps_change = __sdk_target_bitrate_change;
   g_config.f_key_frame  = __sdk_key_frame_request;
@@ -81,6 +82,7 @@ static void __config_print()
   LOGT(TAG, "videoChnId=%u", g_config.video_channel_id);
   LOGT(TAG, "enableMultiPath=%u", g_config.b_enable_multi_path);
   LOGT(TAG, "enableRtsaSdk=%u", g_config.b_enable_rtsa);
+  LOGT(TAG, "enableLanAccelerate=%u", g_config.b_enable_lan_accelerate);
   LOGT(TAG, "codec=%s", g_config.video_codec_type == VideoCodecTypeH265 ? "h265" : "h264");
   LOGT(TAG, "---------------------------------");
 }
@@ -100,6 +102,7 @@ static void __app_print_usage(int argc, char **argv)
   printf(" -m, --enableMultipath      : enable multipath\n");
   printf(" -p, --videoPipeId          : media pipe id, default 0\n");
   printf(" -r, --enableRtsaSdk        : use rtsa sdk, otherwise use native sdk\n");
+  printf(" -l, --enableLanAccelerate  : enable LAN acceleration for P2P local direct connect\n");
   printf(" -t, --token                : token, default NULL\n");
   printf(" -v, --videoChnId           : media channel id, default 1\n");
   printf(" -C, --codec                : video codec type (h264 or h265), default h264\n");
@@ -107,7 +110,7 @@ static void __app_print_usage(int argc, char **argv)
 
 static int __app_parse_args(int argc, char **argv)
 {
-  const char *short_option = "ha:b:c:d:D:f:m:p:r:t:v:C:W:H:";
+  const char *short_option = "ha:b:c:d:D:f:m:p:r:l:t:v:C:W:H:";
   const struct option long_option[] = { { "help",            0, NULL, 'h' },
                                         { "appId",           1, NULL, 'a' },
                                         { "bitrate",         1, NULL, 'b' },
@@ -118,6 +121,7 @@ static int __app_parse_args(int argc, char **argv)
                                         { "enableMultipath", 1, NULL, 'm' },
                                         { "videoPipeId",     1, NULL, 'p' },
                                         { "enableRtsaSdk",   1, NULL, 'r' },
+                                        { "enableLanAccelerate", 1, NULL, 'l' },
                                         { "token",           1, NULL, 't' },
                                         { "videoChnId",      1, NULL, 'v' },
                                         { "codec",           1, NULL, 'C' },
@@ -168,6 +172,9 @@ static int __app_parse_args(int argc, char **argv)
         break;
       case 'r':
         g_config.b_enable_rtsa = strtol(optarg, NULL, 10);
+        break;
+      case 'l':
+        g_config.b_enable_lan_accelerate = strtol(optarg, NULL, 10);
         break;
       case 't':
         snprintf(g_config.token, sizeof(g_config.token), "%s", optarg);

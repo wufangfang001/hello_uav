@@ -156,13 +156,20 @@ struct AgoraServiceConfiguration {
    * This property applies to Android only.
    */
   bool useExternalEglContext;
-
   /**
    * Determines whether to enable domain limit.
    * - `true`: only connect to servers that already parsed by DNS
    * - `false`: (Default) connect to servers with no limit
    */
   bool domainLimit;
+  /**
+   * The config file path, default is NULL for default config path
+   */
+  const char* configDir;
+  /**
+   * The data file path, default is NULL for default data path
+   */
+  const char* dataDir;
 
   AgoraServiceConfiguration() : enableAudioProcessor(true),
                                 enableAudioDevice(true),
@@ -176,7 +183,9 @@ struct AgoraServiceConfiguration {
                                 useStringUid(false),
                                 serviceObserver(NULL),
                                 useExternalEglContext(false),
-                                domainLimit(false){}
+                                domainLimit(false),
+                                configDir(NULL),
+                                dataDir(NULL){}
 };
 /**
  * The audio session configurations.

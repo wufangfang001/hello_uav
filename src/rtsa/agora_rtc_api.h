@@ -17,12 +17,12 @@
 extern "C" {
 #endif
 
-#if defined(_MSC_VER)
-#if defined(__BUILDING_AGORA_SDK__)
+#define BUILD_TARGET_SHARED
+
+#if defined (_MSC_VER) && defined(BUILD_TARGET_SHARED) && defined(AGORA_BUILDING_API)
 #define __agora_api__ __declspec(dllexport)
-#else
+#elif defined (_MSC_VER) && defined(BUILD_TARGET_SHARED) && !defined(AGORA_BUILDING_API)
 #define __agora_api__ __declspec(dllimport)
-#endif
 #else
 #define __agora_api__
 #endif
@@ -148,6 +148,10 @@ typedef enum {
   ERR_OPEN_CHANNEL_TRY_NEXT_VOS = 122,
   /** Client is banned by the server */
   ERR_CLIENT_IS_BANNED_BY_SERVER = 123,
+  /** Invalid user account */
+  ERR_INVALID_USER_ACCOUNT = 124,
+  /** Register user account failed common error */
+  ERR_REGISTER_USER_ACCOUNT = 125,
 #endif // RTN End
 
 /******************************************************************************|
@@ -160,14 +164,6 @@ typedef enum {
   ERR_AUDIO_INVALID_PCM_LEN = 201,
   // Invalid audio codec param
   ERR_AUDIO_INVALID_CODEC_PARAM = 202,
-  /** Audio decoder does not match incoming audio data type.
-   *  The audio codec of send and recv must be the same
-   */
-  ERR_AUDIO_DECODER_NOT_MATCH = 221,
-  /** Audio decoder does not enable
-   *  Currently SDK built-in audio codec only supports G722 and OPUS.
-   */
-  ERR_AUDIO_DECODER_NOT_ENABLE = 222,
 #endif // Audio End
 
 /******************************************************************************|
@@ -222,6 +218,7 @@ typedef enum {
   ERR_RTM_EXCEED_MSG_SIZE = 1004,
   ERR_RTM_EXCEED_MSG_CNT = 1005,
   ERR_RTM_EXCEED_SND_BUFFER = 1006,
+  ERR_RTM_CUSTOM_TYPE_OUT_OF_LENGTH = 1007,
 #endif // RTM End
 
 } agora_err_code_e;
@@ -345,6 +342,14 @@ typedef enum {
 } video_orientation_e;
 
 /**
+ * @brief The video sei data
+ */
+typedef struct {
+  char *sei_data;
+  int   sei_data_len;
+} video_sei_t;
+
+/**
  * The definition of the video_frame_info_t struct.
  */
 typedef struct {
@@ -371,6 +376,11 @@ typedef struct {
    * The rotation information of the encoded video frame: #VIDEO_ORIENTATION.
    */
   video_orientation_e rotation;
+
+  /**
+   * The video sei data
+   */
+  video_sei_t sei_data;
 } video_frame_info_t;
 
 /**
@@ -464,6 +474,26 @@ typedef enum {
    */
   AUDIO_DATA_TYPE_HEAAC2_2CH = 15,
   /**
+   * 16: AACLC1, sample=44100
+   */
+  AUDIO_DATA_TYPE_AACLC1 = 16,
+  /**
+   * 17: AACLC1_2CH, sample=48000, 2CH
+   */
+  AUDIO_DATA_TYPE_AACLC1_2CH = 17,
+  /**
+   * 18: HWAAC, sample=32k
+   */
+  AUDIO_DATA_TYPE_HWAAC = 18,
+  /**
+   * 20: OPUSSWB, sample=32k
+   */
+  AUDIO_DATA_TYPE_OPUSSWB = 20,
+  /**
+   * 21: OPUSFB, sample=48k, 2CH
+   */
+  AUDIO_DATA_TYPE_OPUSFB_2CH = 21,
+  /**
    * 100: PCM (audio codec should be enabled)
    */
   AUDIO_DATA_TYPE_PCM = 100,
@@ -471,6 +501,10 @@ typedef enum {
    * 253: GENERIC
    */
   AUDIO_DATA_TYPE_GENERIC = 253,
+  /**
+   * 254: Unknown
+   */
+  AUDIO_DATA_TYPE_UNKNOW = 254,
 } audio_data_type_e;
 
 /**
@@ -615,24 +649,6 @@ typedef struct {
   int pcm_duration;
 } audio_codec_option_t;
 
-/**
- * The definition of the rtc_audio_process_options_t struct.
- */
-typedef struct{
-  // whether to open audio process
-  bool enable_audio_process;
-  // whether to open uplink aec
-  bool enable_aec;
-  // whether to open downlink aec;
-  bool enable_downlink_aec;
-  // whether to open ns
-  bool enable_ns;
-
-  bool ref_data_from_sdk;
-  // whether to dump audio data from audio process
-  bool enable_dump_data;
-} rtc_audio_process_options_t;
-
 /** Encryption mode.
  */
 typedef enum {
@@ -682,6 +698,7 @@ typedef enum {
   RTC_PACKET_TYPE_RDT,
 } rtc_packet_type_e;
 
+
 /**
  * The definition of the rtc_channel_options_t struct.
  */
@@ -694,17 +711,23 @@ typedef struct {
   bool enable_audio_jitter_buffer;
   // whether to use the audio mixing function, depends on enable_audio_jitter_buffer
   bool enable_audio_mixer;
-  // audio encode and decode configuration when send pcm audio data by #agora_rtc_send_audio_data
+  // whether to decode received audio
+  bool enable_audio_decode;
+  // whether to enable audio ai qos
+  bool enable_audio_ai_qos;
+  // whether to open downlink aec
+  bool enable_audio_downlink_aec;
+  // whether to dump pcm data when do downlink aec
+  bool enable_audio_downlink_aec_pcm_dump;
+  // local audio encode configuration when send pcm audio data by #agora_rtc_send_audio_data
   audio_codec_option_t audio_codec_opt;
-  // audio process options
-  rtc_audio_process_options_t audio_process_opt;
 
   // audio and video data crypto option
   crypto_option_t crypto_opt;
 
-  // enable rdt feature
-  bool enable_rdt;
 
+  // whether to enable lan accelerate feature
+  bool enable_lan_accelerate;
 } rtc_channel_options_t;
 
 
@@ -718,38 +741,6 @@ typedef enum {
   NETWORK_EVENT_UP,
   NETWORK_EVENT_CHANGE,
 } network_event_e;
-
-
-/**
- * Reliable Data Transmission Tunnel message type
- */
-typedef enum rdt_stream_type {
-  RDT_STREAM_CMD,    // Reliable; High priority; Limit 256 bytes per packet, 100 packets per second
-  RDT_STREAM_DATA,   // Reliable; Low priority; Restricted by congestion control; Limit 1024 bytes per packet
-  RDT_STREAM_COUNT,
-} rdt_stream_type_e;
-
-/**
- * Reliable Data Transmission tunnel state
- */
-typedef enum rdt_state {
-  RDT_STATE_CLOSED,  // initial or closed
-  RDT_STATE_OPENED,  // opened and can send data
-  RDT_STATE_BLOCKED, // send buffer is full, can't send data, but can send cmd
-  RDT_STATE_PENDING, // reconnecting tunnel, can't send data
-  RDT_STATE_BROKEN,  // rdt tunnel broken, will auto reset and rebuild tunnel
-} rdt_state_e;
-
-/**
- * Reliable Data Transmission tunnel status info
- */
-typedef struct rdt_status_info {
-  uint32_t     conn_id;
-  uint32_t     peer_uid; // peer uid
-  rdt_state_e  state;    // rdt state
-  int send_queue_size[RDT_STREAM_COUNT];  // queue size of waiting for send
-  int recv_queue_size[RDT_STREAM_COUNT];  // queue size of waitting for delivery
-} rdt_status_info_t;
 
 
 /**
@@ -1009,23 +1000,6 @@ typedef struct {
    */
   void (*on_media_ctrl_msg)(connection_id_t conn_id, uint32_t uid, const void *payload, size_t length);
 
-  /**
-   * Occur when user rdt state changed
-   * @param[in] conn_id  Connection identification
-   * @param[in] uid      Remote user ID
-   * @param[in] state    Rdt tunnel state
-   */
-  void (*on_rdt_state)(connection_id_t conn_id, uint32_t uid, rdt_state_e state);
-
-  /**
-   * Occur when receive rdt message from uid
-   * @param[in] conn_id  Connection identification
-   * @param[in] uid      Remote user ID
-   * @param[in] type     Rdt message type
-   * @param[in] msg      Rdt message content
-   * @param[in] len      Rdt message length
-   */
-  void (*on_rdt_msg)(connection_id_t conn_id, uint32_t uid, rdt_stream_type_e type, const void *msg, size_t len);
 
   /**
    * Occur when receive a stream message.
@@ -1094,6 +1068,24 @@ extern const char *agora_rtc_get_version(void);
  * @return Const static error string
  */
 extern __agora_api__ const char *agora_rtc_err_2_str(int err);
+
+/**
+ * @brief Get heap memory used size(KB) of sdk
+ * @return
+ *    >=0 : memory user size (KB)
+ *    < 0 : error
+ * @technical preview
+ */
+extern __agora_api__ int agora_rtc_get_memory_used(void);
+
+/**
+ * @brief Dump heap memory used info
+ * @return
+ *    >=0 : dump success
+ *    < 0 : failed
+ * @technical preview
+ */
+extern __agora_api__ int agora_rtc_dump_memory_info(void);
 
 
 /**
@@ -1398,6 +1390,22 @@ extern __agora_api__ int agora_rtc_send_video_data(connection_id_t conn_id, cons
 extern __agora_api__ int agora_rtc_set_bwe_param(connection_id_t conn_id, uint32_t min_bps, uint32_t max_bps,
                                                  uint32_t start_bps);
 
+typedef struct {
+  bool enable;
+  uint8_t src_pkg_num;
+  uint8_t fec_pkg_num;
+} audio_fec_config_t;
+
+typedef struct {
+  bool enable;
+  int ratio;  //-1: auto set by sdk, 0-10: set by user
+} video_fec_config_t;
+
+typedef struct {
+  video_fec_config_t video;
+  audio_fec_config_t audio;
+} fec_config_t;
+
 /**
  * @brief Set fec config
  * @param[in] conn_id   : Connection identification, if set CONNECTION_ID_ALL(0) is for all connections
@@ -1412,7 +1420,7 @@ extern __agora_api__ int agora_rtc_set_bwe_param(connection_id_t conn_id, uint32
  * - < 0: Failure
  * @technical preview
  */
-extern __agora_api__ int agora_rtc_set_fec_config(connection_id_t conn_id, bool enable, int ratio);
+extern __agora_api__ int agora_rtc_set_fec_config(connection_id_t conn_id, const fec_config_t *config);
 
 
 
@@ -1448,35 +1456,6 @@ extern __agora_api__ int agora_rtc_set_params(connection_id_t conn_id, const cha
  */
 extern __agora_api__ int agora_rtc_send_media_ctrl_msg(connection_id_t conn_id, uint32_t remote_uid,
                                                        const void *payload, size_t length);
-
-/**
- * Send Reliable message to remote uid in channel
- *
- * @param[in] conn_id       Connection identification
- * @param[in] remote_uid    Remote user ID
- * @param[in] type          Reliable Data Transmission tunnel message type
- * @param[in] msg           Message's payload buffer
- * @param[in] length        Message's payload buffer length (cmd: max 256 bytes, data: max 128KB)
- *
- * @return
- * - = 0: Success
- * - < 0: Failure
- */
-extern __agora_api__ int agora_rtc_send_rdt_msg(connection_id_t conn_id, uint32_t remote_uid, rdt_stream_type_e type,
-                                                const void *msg, size_t length);
-
-/**
- * Get rdt tunnel info
- *
- * @param[in] conn_id       Connection identification
- * @param[in] remote_uid    Remote user ID
- * @param[out] info         rdt tunnel status info
- *
- * @return
- * - = 0: Success
- * - < 0: Failure
- */
-extern __agora_api__ int agora_rtc_get_rdt_status_info(connection_id_t conn_id, uint32_t remote_uid, rdt_status_info_t *info);
 
 
 /**
@@ -1606,8 +1585,9 @@ typedef struct {
    * @param[in] rtm_uid    The remote rtm uid which the data come from.
    * @param[in] msg        The Data received.
    * @param[in] msg_len    Length of the data received.
+   * @param[in] custom_type Custom type of the data received.
    */
-  void (*on_rtm_data)(const char *rtm_uid, const void *msg, size_t msg_len);
+  void (*on_rtm_data)(const char *rtm_uid, const void *msg, size_t msg_len, const char *custom_type);
 
   /**
    * Report the result of the "agora_rtc_send_rtm_data" method call
@@ -1664,12 +1644,13 @@ extern __agora_api__ int agora_rtc_logout_rtm(void);
  * @param[in] msg     Message to send
  * @param[in] msg_len Length of the message(max size: 31KB)
  * @param[in] msg_id Identify the message sent
+ * @param[in] custom_type Designed by customer(max length: 32bytes). Only string types are supported.Set as NULL if not need.
  *
  * @return:
  * - = 0: Success
  * - < 0: Failure
  */
-extern __agora_api__ int agora_rtc_send_rtm_data(const char *rtm_uid, const void *msg, size_t msg_len, uint32_t msg_id);
+extern __agora_api__ int agora_rtc_send_rtm_data(const char *rtm_uid, const void *msg, size_t msg_len, uint32_t msg_id, const char *custom_type);
 
 #ifdef __cplusplus
 }

@@ -238,6 +238,107 @@ enum RAW_AUDIO_FRAME_OP_MODE_TYPE {
   RAW_AUDIO_FRAME_OP_MODE_READ_WRITE = 2,
 };
 
+/** Definition of IMetadataObserver
+*/
+class IMetadataObserver {
+public:
+    virtual ~IMetadataObserver() {}
+
+    /**
+     * @brief Metadata type of the observer. We only support video metadata for now.
+     */
+    enum METADATA_TYPE
+    {
+        /**
+         * -1: The type of metadata is unknown.
+         */
+        UNKNOWN_METADATA = -1,
+        /**
+         * 0: The type of metadata is video.
+         */
+        VIDEO_METADATA = 0,
+    };
+    /**
+      * The maximum metadata size.
+      */
+    enum MAX_METADATA_SIZE_TYPE
+    {
+        INVALID_METADATA_SIZE_IN_BYTE = -1,
+        DEFAULT_METADATA_SIZE_IN_BYTE = 512,
+        MAX_METADATA_SIZE_IN_BYTE = 1024
+    };
+
+    /**
+     * @brief Media metadata.
+     */
+    struct Metadata
+    {
+        /**
+         * The channel name.
+         */
+        const char* channelId;
+        /**
+         * The user ID.
+         * - For the recipient: The ID of the remote user who sent the `Metadata`.
+         * - For the sender: Ignore it.
+         */
+        unsigned int uid;
+        /**
+         * The buffer size of the sent or received `Metadata`.
+         */
+        unsigned int size;
+        /**
+         * The buffer address of the received `Metadata`.
+         */
+        unsigned char *buffer;
+        /**
+         * The timestamp (ms) of when the `Metadata` is sent.
+         */
+        long long timeStampMs;
+
+          Metadata() : channelId(NULL), uid(0), size(0), buffer(NULL), timeStampMs(0) {}
+    };
+
+    /**
+     * @brief Occurs when the SDK requests the maximum size of the metadata.
+     *
+     * @details
+     * After successfully complete the registration by calling `registerMediaMetadataObserver`, the SDK
+     * triggers this callback once every video frame is sent. You need to specify the maximum size of
+     * the metadata in the return value of this callback.
+     *
+     * @return
+     * The maximum size of the `buffer` of the metadata that you want to use. The highest value is 1024
+     * bytes. Ensure that you set the return value.
+     */
+    virtual int getMaxMetadataSize() { return DEFAULT_METADATA_SIZE_IN_BYTE; }
+
+    /**
+     * @brief Occurs when the SDK is ready to send metadata.
+     *
+     * @details
+     * This callback is triggered when the SDK is ready to send metadata.
+     *
+     * @note Ensure that the size of the metadata does not exceed the value set in the
+     * `getMaxMetadataSize` callback.
+     *
+     * @param source_type Video data type. See `VIDEO_SOURCE_TYPE`.
+     * @param metadata The metadata that the user wants to send. See `Metadata`.
+     *
+     * @return
+     * - `true`: Send the video frame.
+     * - `false`: Do not send the video frame.
+     */
+    virtual bool onReadyToSendMetadata(Metadata &metadata, VIDEO_SOURCE_TYPE source_type) = 0;
+
+    /**
+     * @brief Occurs when the local user receives the metadata.
+     *
+     * @param metadata The metadata received. See `Metadata`.
+     *
+     */
+    virtual void onMetadataReceived(const Metadata& metadata) = 0;
+};
 }  // namespace rtc
 
 namespace media {
@@ -731,8 +832,7 @@ struct Hdr10MetadataInfo {
         maxFrameAverageLightLevel(0){}
 
   bool validate() const {
-    return maxContentLightLevel >= 0 && maxContentLightLevel <= 20000 &&
-           maxFrameAverageLightLevel >= 0 &&
+    return maxContentLightLevel <= 20000 &&
            maxFrameAverageLightLevel <= 20000;
   }
 };
@@ -1642,7 +1742,9 @@ class IAudioSpectrumObserver {
 class IVideoEncodedFrameObserver {
  public:
   /**
-   * Occurs each time the SDK receives an encoded video image.
+   * @brief Occurs each time the SDK receives an encoded video image.
+   * @since 4.6.0
+   * @param channelId The channel name.
    * @param uid The user id of remote user.
    * @param imageBuffer The pointer to the video image buffer.
    * @param length The data length of the video image.
@@ -1652,7 +1754,7 @@ class IVideoEncodedFrameObserver {
    * - false: Do not accept.
    */
   virtual bool onEncodedVideoFrameReceived(
-      rtc::uid_t uid, const uint8_t* imageBuffer, size_t length,
+      const char* channelId, base::user_id_t uid, const uint8_t* imageBuffer, size_t length,
       const rtc::EncodedVideoFrameInfo& videoEncodedFrameInfo) = 0;
 
   virtual ~IVideoEncodedFrameObserver() {}

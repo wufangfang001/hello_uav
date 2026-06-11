@@ -7,7 +7,7 @@
 
 // This header file is included by both high level and low level APIs,
 #pragma once  // NOLINT(build/header_guard)
-#define SDK_BUILD_NUM ( 940020 )
+#define SDK_BUILD_NUM ( 1159375 )
 
 #include <stdarg.h>
 #include <stddef.h>
@@ -1679,8 +1679,7 @@ enum MAX_USER_ACCOUNT_LENGTH_TYPE {
  */
 struct EncodedVideoFrameInfo {
   EncodedVideoFrameInfo()
-      : uid(0),
-        codecType(VIDEO_CODEC_H264),
+      : codecType(VIDEO_CODEC_H264),
         width(0),
         height(0),
         framesPerSecond(0),
@@ -1693,8 +1692,7 @@ struct EncodedVideoFrameInfo {
         presentationMs(-1) {}
 
   EncodedVideoFrameInfo(const EncodedVideoFrameInfo& rhs)
-      : uid(rhs.uid),
-        codecType(rhs.codecType),
+      : codecType(rhs.codecType),
         width(rhs.width),
         height(rhs.height),
         framesPerSecond(rhs.framesPerSecond),
@@ -1708,7 +1706,6 @@ struct EncodedVideoFrameInfo {
 
   EncodedVideoFrameInfo& operator=(const EncodedVideoFrameInfo& rhs) {
     if (this == &rhs) return *this;
-    uid = rhs.uid;
     codecType = rhs.codecType;
     width = rhs.width;
     height = rhs.height;
@@ -1723,10 +1720,6 @@ struct EncodedVideoFrameInfo {
     return *this;
   }
 
-  /**
-   * ID of the user that pushes the the external encoded video frame..
-   */
-  uid_t uid;
   /**
    * The codec type of the local video stream. See #VIDEO_CODEC_TYPE. The default value is
    * `VIDEO_CODEC_H265 (3)`.

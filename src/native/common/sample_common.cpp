@@ -184,21 +184,21 @@ int32_t setLowDelay(agora::agora_refptr<agora::rtc::IRtcConnection> &connection)
 	if (!ret) {
 		AG_LOG(INFO, "[Low Delay] set che.audio.uplink_max_retry_times 5 successfully!");
 	} else {
-		AG_LOG(INFO, "[Low Delay] set che.audio.uplink_max_retry_times 5  fail!!! The err num is %d",ret);
+		AG_LOG(INFO, "[Low Delay] set che.audio.uplink_max_retry_times 5 fail!!! The err num is %d",ret);
 	}
 
 	ret = s->setUInt("che.audio.downlink_max_retry_times", 5);
   if (!ret) {
     AG_LOG(INFO, "[Low Delay] set che.audio.downlink_max_retry_times 5 successfully!");
   } else {
-    AG_LOG(INFO, "[Low Delay] set che.audio.downlink_max_retry_times 5  fail!!! The err num is %d",ret);
+    AG_LOG(INFO, "[Low Delay] set che.audio.downlink_max_retry_times 5 fail!!! The err num is %d",ret);
   } 
 
 	ret = s->setUInt("rtc.video.downMaxRetryTimes", 5);
 	if (!ret) {
 		AG_LOG(INFO, "[Low Delay] set rtc.video.downMaxRetryTimes 5 successfully!");
 	} else {
-		AG_LOG(INFO, "[Low Delay] set rtc.video.downMaxRetryTimes 5  fail!!! The err num is %d",ret);
+		AG_LOG(INFO, "[Low Delay] set rtc.video.downMaxRetryTimes 5 fail!!! The err num is %d",ret);
 	}
 
   ret = s->setInt("rtc.paced_sender_enabled", 0);
@@ -209,11 +209,11 @@ int32_t setLowDelay(agora::agora_refptr<agora::rtc::IRtcConnection> &connection)
   }
 
   ret = s->setInt("rtc.video.playout_delay_min", 0);
-	if (!ret) {
-		AG_LOG(INFO, "[Low Delay] set rtc.video.playout_delay_min 0 successfully!");
-	} else {
-		AG_LOG(INFO, "[Low Delay] set rtc.video.playout_delay_min 0 fail!!! The err num is %d", ret);
-	}
+  if (!ret) {
+    AG_LOG(INFO, "[Low Delay] set rtc.video.playout_delay_min 0 successfully!");
+  } else {
+    AG_LOG(INFO, "[Low Delay] set rtc.video.playout_delay_min 0 fail!!! The err num is %d", ret);
+  }
 
   ret = s->setBool("che.video.vpr.enable", false);
   if (!ret) {
@@ -250,6 +250,7 @@ int32_t setLowDelay(agora::agora_refptr<agora::rtc::IRtcConnection> &connection)
     AG_LOG(INFO, "[Low Delay] set rtc.video.apas_harq_enable true fail!!! The err num is %d", ret);
   }
 
+
   ret = s->setInt("rtc.ack_delay", 1);
   if (!ret) {
     AG_LOG(INFO, "[Low Delay] set rtc.ack_delay 1 successfully!");
@@ -278,13 +279,6 @@ int32_t setLowDelay(agora::agora_refptr<agora::rtc::IRtcConnection> &connection)
     AG_LOG(INFO, "[Low Delay] set rtc.cc_private 1048 fail!!! The err num is %d", ret);
   }
 
-  ret = s->setInt("rtc.remote_cc_private", 1048);
-  if (!ret) {
-    AG_LOG(INFO, "[Low Delay] set rtc.remote_cc_private 1048 successfully!");
-  } else {
-    AG_LOG(INFO, "[Low Delay] set rtc.remote_cc_private 1048 fail!!! The err num is %d", ret);
-  }
-
   ret = s->setInt("rtc.congestion_window_compensation_mode", 1);
   if (!ret) {
     AG_LOG(INFO, "[Low Delay] set rtc.congestion_window_compensation_mode 1 successfully!");
@@ -292,11 +286,11 @@ int32_t setLowDelay(agora::agora_refptr<agora::rtc::IRtcConnection> &connection)
     AG_LOG(INFO, "[Low Delay] set rtc.congestion_window_compensation_mode 1 fail!!! The err num is %d", ret);
   }
 
-  ret = s->setBool("rtc.video.decoder_out_byte_frame", false);
+  ret = s->setBool("rtc.video.decoder_out_byte_frame", true);
   if (!ret) {
-    AG_LOG(INFO, "[Low Delay] set rtc.video.decoder_out_byte_frame false successfully!");
+    AG_LOG(INFO, "[Low Delay] set rtc.video.decoder_out_byte_frame true successfully!");
   } else {
-    AG_LOG(INFO, "[Low Delay] set rtc.video.decoder_out_byte_frame false fail!!! The err num is %d", ret);
+    AG_LOG(INFO, "[Low Delay] set rtc.video.decoder_out_byte_frame true fail!!! The err num is %d", ret);
   }
 
   ret = s->setString("che.video.broadcast.special_config", "{\"che.video.vpr.enable\": false}");
@@ -341,7 +335,7 @@ int32_t setLowDelay(agora::agora_refptr<agora::rtc::IRtcConnection> &connection)
     AG_LOG(INFO, "[Low Delay] set rtc.remote_enable_conservative_probe_rtt_mode 1 fail!!! The err num is %d", ret);
   }
 
-  ret = s->setString("rtc.video.enable_sr", " {\"enabled\": false, \"mode\":2}");
+  ret = s->setString("rtc.video.enable_sr", "{\"enabled\": false, \"mode\":2}");
   if (!ret) {
     AG_LOG(INFO, "[Low Delay] set rtc.video.enable_sr successfully!");
   } else {  
