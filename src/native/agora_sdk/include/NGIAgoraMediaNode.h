@@ -261,7 +261,7 @@ class IAudioPcmDataSender : public RefCountInterface {
       const size_t samples_per_channel,  // for 10ms Data, number_of_samples * 100 = sample_rate
       const agora::rtc::BYTES_PER_SAMPLE bytes_per_sample,     // 2
       const size_t number_of_channels,
-      const uint32_t sample_rate, aosl_ref_t ares = AOSL_REF_INVALID) = 0; // sample_rate > 8000)
+      const uint32_t sample_rate) = 0; // sample_rate > 8000)
 
  protected:
   ~IAudioPcmDataSender() {}
@@ -289,7 +289,7 @@ class IAudioEncodedFrameSender : public RefCountInterface {
    * - `false`: Failure.
    */
   virtual bool sendEncodedAudioFrame(const uint8_t* payload_data, size_t payload_size,
-                                     const EncodedAudioFrameInfo& audioFrameInfo, aosl_ref_t ares = AOSL_REF_INVALID) = 0;
+                                     const EncodedAudioFrameInfo& audioFrameInfo) = 0;
 
  protected:
   ~IAudioEncodedFrameSender() {}
@@ -454,7 +454,7 @@ class IVideoFrameSender : public RefCountInterface {
    * - 0: Success.
    * - < 0: Failure.
    */
-  virtual int sendVideoFrame(const media::base::ExternalVideoFrame& videoFrame, aosl_ref_t ares = AOSL_REF_INVALID) = 0;
+  virtual int sendVideoFrame(const media::base::ExternalVideoFrame& videoFrame) = 0;
 
  protected:
   ~IVideoFrameSender() {}
@@ -481,7 +481,7 @@ class IVideoEncodedImageSender : public RefCountInterface {
    * - `false`: Failure.
    */
   virtual bool sendEncodedVideoImage(const uint8_t* imageBuffer, size_t length,
-                                     const EncodedVideoFrameInfo& videoEncodedFrameInfo, aosl_ref_t ares = AOSL_REF_INVALID) = 0;
+                                     const EncodedVideoFrameInfo& videoEncodedFrameInfo) = 0;
 
  protected:
   ~IVideoEncodedImageSender() {}

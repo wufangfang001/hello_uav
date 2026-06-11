@@ -161,10 +161,20 @@ int agora_native_init(agora_config_t *config)
 
   setLowDelay(connection);
 
+  if (config->b_enable_lan_accelerate) {
+    auto agoraParam = connection->getAgoraParameter();
+    if (agoraParam && agoraParam->setBool("rtc.lan_accelerate_enable", true) == 0) {
+      AG_LOG(INFO, "enabled LAN acceleration for P2P local direct connect");
+    } else {
+      AG_LOG(ERROR, "failed to enable LAN acceleration for P2P local direct connect");
+    }
+  }
+
   if (config->b_enable_multi_path) {
     if (connection->enableMultipath(true) != 0) {
       AG_LOG(ERROR, "enable multipath failed!");
     } else {
+      connection->setUplinkMultipathMode(agora::rtc::Duplicate);
       AG_LOG(INFO, "enable multipath success!");
     }
   }
@@ -199,6 +209,9 @@ int agora_native_init(agora_config_t *config)
     service = nullptr;
     return -1;
   }
+
+  // Enable real-time chorus mode to improve latency behavior
+  connection->getLocalUser()->setAudioScenario(agora::rtc::AUDIO_SCENARIO_TYPE::AUDIO_SCENARIO_CHORUS);   // 开启实时合唱，提升延时表现
 
   // Create media node factory
   factory = service->createMediaNodeFactory();
@@ -249,6 +262,17 @@ int agora_native_init(agora_config_t *config)
     AG_LOG(ERROR, "Failed to create video track!");
     agora_native_fini();
     return -1;
+  }
+
+  {
+    agora::rtc::SimulcastConfigInternal simulcastConfig;
+    simulcastConfig.reset();
+    int simulcastRet = customVideoTrack->setSimulcastStreamMode(agora::rtc::SIMULCAST_STREAM_MODE::DISABLE_SIMULCAST_STREAM, simulcastConfig);
+    if (simulcastRet != 0) {
+      AG_LOG(WARNING, "Failed to disable simulcast stream mode, err=%d", simulcastRet);
+    } else {
+      AG_LOG(INFO, "Disabled simulcast stream mode successfully");
+    }
   }
 
   // Publish video track

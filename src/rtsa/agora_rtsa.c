@@ -11,11 +11,6 @@
 
 #define TAG     "[demo]"
 
-#define BWE_MIN_BITRATE   VIDEO_ENCODE_TARGET_BPS / 4
-#define BWE_MAX_BITRATE   VIDEO_ENCODE_TARGET_BPS * 2
-#define BWE_START_BITRATE VIDEO_ENCODE_TARGET_BPS
-
-
 static connection_id_t g_conn_id = CONNECTION_ID_INVALID;
 
 static bool g_b_connected_flag = false;
@@ -179,6 +174,7 @@ static void __channel_option_init(rtc_channel_options_t *channel_options)
   channel_options->auto_subscribe_audio = false;
   channel_options->auto_subscribe_video = false;
   channel_options->enable_audio_mixer   = false;
+  channel_options->enable_lan_accelerate = false;
   channel_options->audio_codec_opt.audio_codec_type = AUDIO_CODEC_DISABLED;
 }
 
@@ -225,6 +221,8 @@ int agora_rtsa_init(agora_config_t *config)
     LOGE(TAG, "Failed set bwe param, reason: %s", agora_rtc_err_2_str(rval));
     goto L_AGORA_RTC_SET_BWE_PARAM_FAILED;
   }
+
+  channel_options.enable_lan_accelerate = config->b_enable_lan_accelerate;
 
   if (0 > (rval = agora_rtc_join_channel(g_conn_id, config->channel, 0, __get_token(config->appid, config->token), &channel_options))) {
     LOGE(TAG, "Failed to join channel \"%s\", reason: %s", config->channel, agora_rtc_err_2_str(rval));

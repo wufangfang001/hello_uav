@@ -21,14 +21,19 @@ typedef struct {
   char appid[64];
   char token[512];
   char channel[64];
+  char video_device_name[64];
 
   uint32_t video_width;
   uint32_t video_height;
   uint32_t video_bps;
   uint32_t video_fps;
+  uint32_t video_device_id;
+  uint32_t video_pipe_id;
+  uint32_t video_channel_id;
 
   bool b_enable_multi_path;
   bool b_enable_rtsa;
+  bool b_enable_lan_accelerate;
 
   f_sdk_target_bitrate_change f_bps_change;
   f_sdk_key_frame_request     f_key_frame;

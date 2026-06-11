@@ -213,7 +213,7 @@ class IRtcConnection : public RefCountInterface {
    *   - -2(ERR_INVALID_ARGUMENT): The argument that you pass is invalid.
    *   - -8(ERR_INVALID_STATE): The current connection state is not CONNECTION_STATE_DISCONNECTED(1).
    */
-  virtual int connect(const char* token, const char* channelId,  const char* info, user_id_t userId, aosl_ref_t ares = AOSL_REF_INVALID) = 0;
+  virtual int connect(const char* token, const char* channelId,  const char* info, user_id_t userId) = 0;
 
   /**
    * Connects to an Agora channel.
@@ -226,7 +226,7 @@ class IRtcConnection : public RefCountInterface {
    * The SDK also triggers `onConnected` or `onDisconnected` to notify you of the state change.
    * @param settings The settings of connecting. 
    */
-  virtual int connect(const TConnectSettings& settings, aosl_ref_t ares = AOSL_REF_INVALID) = 0;
+  virtual int connect(const TConnectSettings& settings) = 0;
 
   /**
    * Disconnects from the Agora channel.
@@ -440,7 +440,7 @@ class IRtcConnection : public RefCountInterface {
    * - 0: Success.
    * - < 0: Failure.
    */
-  virtual int sendStreamMessage(int streamId, const char* data, size_t length, aosl_ref_t ares = AOSL_REF_INVALID) = 0;
+  virtual int sendStreamMessage(int streamId, const char* data, size_t length) = 0;
 
   /** Send Reliable message to remote uid in channel.
    * @param UserId remote user id.
@@ -484,7 +484,7 @@ class IRtcConnection : public RefCountInterface {
    * - 0: Success.
    * - < 0: Failure.
    */
-  virtual int enableEncryption(bool enabled, const EncryptionConfig& config, aosl_ref_t ares = AOSL_REF_INVALID) = 0;
+  virtual int enableEncryption(bool enabled, const EncryptionConfig& config) = 0;
 
   /**
    * Reports a custom event to Agora.
