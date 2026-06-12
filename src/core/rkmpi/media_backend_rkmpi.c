@@ -533,7 +533,7 @@ static int __rkmpi_request_key_frame(void)
 {
   RK_S32 ret;
 
-  ret = RK_MPI_VENC_RequestIDR(RKMPI_VENC_CHN, RK_TRUE);
+  ret = RK_MPI_VENC_RequestIDR(RKMPI_VENC_CHN, RK_FALSE);
   if (ret != RK_SUCCESS) {
     LOGE(TAG, "RK_MPI_VENC_RequestIDR failed, ret=0x%x", ret);
     return -1;
