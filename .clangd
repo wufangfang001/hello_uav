@@ -1,0 +1,8 @@
+CompileFlags:
+  Add:
+    - -I../inc
+    - -I../src/core
+    - -I../src/native/agora_sdk/include
+    - -I../src/native/common
+    - -xc++
+    - -std=c++14
