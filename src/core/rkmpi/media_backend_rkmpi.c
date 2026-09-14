@@ -164,8 +164,8 @@ static void __rkmpi_fill_vi_defaults(const media_video_config_t *config)
   g_vi_chn_attr.enPixelFormat = RK_FMT_YUV420SP;
   g_vi_chn_attr.enCompressMode = COMPRESS_MODE_NONE;
   g_vi_chn_attr.u32Depth = 1;
-  g_vi_chn_attr.stFrameRate.s32SrcFrameRate = -1;
-  g_vi_chn_attr.stFrameRate.s32DstFrameRate = -1;
+  g_vi_chn_attr.stFrameRate.s32SrcFrameRate = (RK_S32)config->capture_fps;
+  g_vi_chn_attr.stFrameRate.s32DstFrameRate = (RK_S32)config->fps;
   g_vi_chn_attr.stIspOpt.u32BufCount = 3;
   g_vi_chn_attr.stIspOpt.enMemoryType = VI_V4L2_MEMORY_TYPE_DMABUF;
   g_vi_chn_attr.stIspOpt.enCaptureType = VI_V4L2_CAPTURE_TYPE_VIDEO_CAPTURE;
@@ -217,6 +217,7 @@ static void __rkmpi_fill_venc_defaults(const media_video_config_t *config)
 static int __rkmpi_vi_init(void)
 {
   RK_S32 ret;
+  VI_CHN_ATTR_S applied_attr;
 
   ret = RK_MPI_VI_GetDevAttr((VI_DEV)g_config.device_id, &g_vi_dev_attr);
   if (ret == RK_ERR_VI_NOT_CONFIG) {
@@ -258,6 +259,16 @@ static int __rkmpi_vi_init(void)
     LOGE(TAG, "RK_MPI_VI_EnableChn failed, ret=0x%x", ret);
     RK_MPI_VI_DisableDev((VI_DEV)g_config.device_id);
     return -1;
+  }
+
+  memset(&applied_attr, 0, sizeof(applied_attr));
+  ret = RK_MPI_VI_GetChnAttr((VI_PIPE)g_config.pipe_id, (VI_CHN)g_config.channel_id, &applied_attr);
+  if (ret == RK_SUCCESS) {
+    LOGT(TAG, "VI frame rate applied: src=%d fps, dst=%d fps",
+         applied_attr.stFrameRate.s32SrcFrameRate,
+         applied_attr.stFrameRate.s32DstFrameRate);
+  } else {
+    LOGW(TAG, "RK_MPI_VI_GetChnAttr failed, ret=0x%x", ret);
   }
 
   g_vi_initialized = true;
@@ -379,6 +390,13 @@ static int __rkmpi_update_bitrate(uint32_t target_bps)
 static int __rkmpi_init(const media_video_config_t *config)
 {
   RK_S32 ret;
+
+  if (config == NULL || config->fps == 0 || config->capture_fps == 0 || config->fps > config->capture_fps) {
+    LOGE(TAG, "invalid frame rate: capture_fps=%u, output_fps=%u",
+         config == NULL ? 0 : config->capture_fps,
+         config == NULL ? 0 : config->fps);
+    return -1;
+  }
 
   memset(&g_config, 0, sizeof(g_config));
   g_config = *config;

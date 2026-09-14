@@ -37,8 +37,10 @@ LD_LIBRARY_PATH="lib:$LD_LIBRARY_PATH" ./hello-uav --token aab8b8f5a8cd4469a6304
 示例（指定分辨率）：
 LD_LIBRARY_PATH="lib:$LD_LIBRARY_PATH" ./hello-uav --appId aab8b8f5a8cd4469a63042fcfafe7063 --channelId hello-uav --fps 25 --bitrate 1500000 -W 1920 -H 1080
 
+RK 平台中 `--captureFps` 表示摄像头/ISP 的实际输入帧率（默认 30），`--fps` 表示编码输出帧率。例如摄像头输出 30fps、编码需要 20fps 时使用 `--captureFps 30 --fps 20`。VI 会在送入 VENC 前完成降帧，确保编码帧率和码控使用的帧率一致。
+
 4、支持RTSA和native通道切换  
 --enableRtsaSdk 1 切换到RTSA；--enableRtsaSdk 0 切换到native  
 
 5、注意  
-当前选择的摄像头不支持采集帧率配置，--fps务必设置为25，或者不配置默认即25帧  
+当前选择的摄像头不支持修改传感器采集帧率；请通过 `--captureFps` 指定实际采集帧率，通过 `--fps` 指定编码输出帧率。

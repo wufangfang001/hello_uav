@@ -17,6 +17,7 @@ typedef struct {
   uint32_t width;
   uint32_t height;
   uint32_t fps;
+  uint32_t capture_fps;
   uint32_t bps;
   uint32_t device_id;
   uint32_t pipe_id;

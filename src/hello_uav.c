@@ -31,6 +31,7 @@ static void __config_init(void)
   g_config.video_width  = 1280;
   g_config.video_height = 720;
   g_config.video_bps    = 1500000;
+  g_config.video_capture_fps = 30;
   g_config.video_fps    = 25;
   g_config.video_device_id = 0;
   g_config.video_pipe_id = 0;
@@ -75,6 +76,7 @@ static void __config_print()
   LOGT(TAG, "token=%s", g_config.token);
   LOGT(TAG, "channel=%s", g_config.channel);
   LOGT(TAG, "bitrate=%u", g_config.video_bps);
+  LOGT(TAG, "captureFps=%u", g_config.video_capture_fps);
   LOGT(TAG, "fps=%u", g_config.video_fps);
   LOGT(TAG, "videoDevice=%s", g_config.video_device_name);
   LOGT(TAG, "videoDevId=%u", g_config.video_device_id);
@@ -96,6 +98,7 @@ static void __app_print_usage(int argc, char **argv)
   printf(" -c, --channelId            : channel name\n");
   printf(" -d, --videoDevice          : video device/entity name, default /dev/video0\n");
   printf(" -D, --videoDevId           : media device id, default 0\n");
+  printf(" -F, --captureFps           : camera input fps, default 30\n");
   printf(" -f, --fps                  : video fps\n");
   printf(" -W, --videoWidth           : video width\n");
   printf(" -H, --videoHeight          : video height\n");
@@ -110,13 +113,14 @@ static void __app_print_usage(int argc, char **argv)
 
 static int __app_parse_args(int argc, char **argv)
 {
-  const char *short_option = "ha:b:c:d:D:f:m:p:r:l:t:v:C:W:H:";
+  const char *short_option = "ha:b:c:d:D:F:f:m:p:r:l:t:v:C:W:H:";
   const struct option long_option[] = { { "help",            0, NULL, 'h' },
                                         { "appId",           1, NULL, 'a' },
                                         { "bitrate",         1, NULL, 'b' },
                                         { "channelId",       1, NULL, 'c' },
                                         { "videoDevice",     1, NULL, 'd' },
                                         { "videoDevId",      1, NULL, 'D' },
+                                        { "captureFps",      1, NULL, 'F' },
                                         { "fps",             1, NULL, 'f' },
                                         { "enableMultipath", 1, NULL, 'm' },
                                         { "videoPipeId",     1, NULL, 'p' },
@@ -154,6 +158,9 @@ static int __app_parse_args(int argc, char **argv)
         break;
       case 'D':
         g_config.video_device_id = strtol(optarg, NULL, 10);
+        break;
+      case 'F':
+        g_config.video_capture_fps = strtol(optarg, NULL, 10);
         break;
       case 'f':
         g_config.video_fps = strtol(optarg, NULL, 10);
@@ -250,6 +257,7 @@ static void* __worker(void *args)
     .width = g_config.video_width,
     .height = g_config.video_height,
     .fps = g_config.video_fps,
+    .capture_fps = g_config.video_capture_fps,
     .bps = g_config.video_bps,
     .device_id = g_config.video_device_id,
     .pipe_id = g_config.video_pipe_id,

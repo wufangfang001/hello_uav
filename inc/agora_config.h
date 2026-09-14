@@ -26,6 +26,7 @@ typedef struct {
   uint32_t video_width;
   uint32_t video_height;
   uint32_t video_bps;
+  uint32_t video_capture_fps;
   uint32_t video_fps;
   uint32_t video_device_id;
   uint32_t video_pipe_id;
